@@ -1,0 +1,7 @@
+## Interface: 16001
+## Title: MINE - Materials In Everyone's Inventory
+## Notes: Counts crafting materials in your bags.
+## Author: Nick Gossin
+## Version: 0.1.0
+
+Core.lua

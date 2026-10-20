@@ -1,7 +1,3 @@
-param(
-    [string]$InterfaceVersion
-)
-
 $ErrorActionPreference = "Stop"
 
 $addonName = "MINE"
@@ -26,15 +22,7 @@ if ($tocContent -notmatch '(?m)^## Interface:\s*(\d+)\s*$') {
     throw "Could not read the client interface version from $tocPath"
 }
 
-if ($InterfaceVersion) {
-    if ($InterfaceVersion -notmatch '^\d+$') {
-        throw "InterfaceVersion must be a numeric client interface value."
-    }
-    $tocContent = $tocContent -replace '(?m)^## Interface:\s*\d+\s*$', "## Interface: $InterfaceVersion"
-}
-else {
-    $InterfaceVersion = $Matches[1]
-}
+$interfaceVersion = $Matches[1]
 
 foreach ($file in $filesToPackage) {
     if (-not (Test-Path -LiteralPath (Join-Path $projectDirectory $file) -PathType Leaf)) {
@@ -98,4 +86,4 @@ finally {
     $archive.Dispose()
 }
 
-Write-Output "Created install-ready addon package: $archivePath (Interface: $InterfaceVersion)"
+Write-Output "Created WoW Forever addon package: $archivePath (Interface: $interfaceVersion)"

@@ -1,7 +1,8 @@
 ## Interface: 16001
 ## Title: MINE - Materials In Everyone's Inventory
-## Notes: Counts crafting materials in your bags.
+## Notes: Tracks crafting materials by character and account, with automatic addon sharing.
 ## Author: Nick Gossin
-## Version: 0.1.0
+## Version: 0.3.0
+## SavedVariables: MINE_DB
 
 Core.lua

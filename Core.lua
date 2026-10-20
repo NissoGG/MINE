@@ -29,14 +29,21 @@ local categoryBySubType = {
 local activeTab = "character"
 local characterKey
 local bankOpen = false
+local guildBankOpen = false
 local incomingTransfers = {}
 local outgoingMessages = {}
 local bagRefreshDelay
+local guildBankRefreshDelay
 local loginShareDelay
+local guildCheckDelay
+local queuedGuildTab
+local guildTabQueryDelay
 local sendCooldown = 0
 local snapshotSequence = 0
 local runtimeFrame = CreateFrame("Frame")
 local RuntimeUpdate
+local currentGuildName
+local Refresh
 
 local function GetItemCategory(itemType, itemSubType)
     if not itemType or (itemType ~= "Trade Goods" and itemType ~= tradeGoodsType) then
@@ -51,19 +58,24 @@ local function UpdateItemMetadata(itemId, item)
     if name then
         item.name = name
     end
-
-    local function UpdateSharedItemMetadata(itemId)
-        for _, shared in pairs(MINE_DB.shared) do
-            local item = shared.items[itemId] or shared.items[tostring(itemId)]
-            if item then
-                UpdateItemMetadata(itemId, item)
-            end
-        end
-    end
     if category then
         item.category = category
         item.level = tonumber(itemLevel) or 0
     end
+end
+
+local function UpdateSharedItemMetadata(itemId)
+    for _, shared in pairs(MINE_DB.shared) do
+        local item = shared.items[itemId] or shared.items[tostring(itemId)]
+        if item then
+            UpdateItemMetadata(itemId, item)
+        end
+    end
+end
+
+local function GetCurrentGuildName()
+    local guildName = GetGuildInfo and GetGuildInfo("player") or nil
+    return guildName ~= "" and guildName or nil
 end
 
 local function ScanContainer(container)
@@ -126,6 +138,81 @@ local function SaveBank()
     if character then
         character.bankItems = ScanContainer("bank")
         character.bankLastUpdate = time()
+    end
+end
+
+local function ScanGuildBank()
+    local guildBank = MINE_DB and MINE_DB.guildBank
+    if not guildBankOpen or not guildBank or not currentGuildName
+        or guildBank.guildName ~= currentGuildName or not GetNumGuildBankTabs
+        or not GetGuildBankTabInfo or not GetGuildBankItemInfo or not GetGuildBankItemLink then
+        return
+    end
+
+    local items = {}
+    local tabCount = GetNumGuildBankTabs() or 0
+    local slotCount = NUM_GUILDBANKSLOTS_PER_TAB or 98
+    for tab = 1, tabCount do
+        local _, _, isViewable = GetGuildBankTabInfo(tab)
+        if isViewable ~= false then
+            for slot = 1, slotCount do
+                local _, count = GetGuildBankItemInfo(tab, slot)
+                local link = GetGuildBankItemLink(tab, slot)
+                if link and count and count > 0 then
+                    local itemId = tonumber(link:match("item:(%d+)"))
+                    local name, _, _, itemLevel, _, itemType, itemSubType = GetItemInfo(link)
+                    local category = GetItemCategory(itemType, itemSubType)
+                    if itemId and name and category then
+                        local item = items[itemId]
+                        if item then
+                            item.count = item.count + count
+                        else
+                            items[itemId] = {
+                                name = name,
+                                count = count,
+                                category = category,
+                                level = tonumber(itemLevel) or 0
+                            }
+                        end
+                    end
+                end
+            end
+        end
+    end
+
+    guildBank.items = items
+    guildBank.lastUpdate = time()
+end
+
+local function UpdateGuildBankItemMetadata(itemId)
+    local guildBank = MINE_DB and MINE_DB.guildBank
+    local item = guildBank and guildBank.items
+        and (guildBank.items[itemId] or guildBank.items[tostring(itemId)])
+    if item then
+        UpdateItemMetadata(itemId, item)
+    end
+end
+
+local function RefreshGuildMembership()
+    local guildName = GetCurrentGuildName()
+    local membershipChanged = guildName ~= currentGuildName
+    currentGuildName = guildName
+    local guildBankCleared = MINE_DB.guildBank and MINE_DB.guildBank.guildName ~= guildName
+    if guildBankCleared then
+        MINE_DB.guildBank = nil
+    end
+    if guildName and not MINE_DB.guildBank then
+        MINE_DB.guildBank = { guildName = guildName, items = {} }
+    end
+    if membershipChanged or guildBankCleared then
+        if guildBankOpen then
+            guildBankOpen = false
+            queuedGuildTab = nil
+            guildTabQueryDelay = nil
+        end
+        if Refresh then
+            Refresh()
+        end
     end
 end
 
@@ -223,6 +310,10 @@ local function GetDisplayLines()
             AddInventoryToTotals(totals, entry.items, ownerName)
             AddInventoryToTotals(totals, entry.bankItems, ownerName .. " bank")
         end
+        local guildBank = MINE_DB.guildBank
+        if guildBank and guildBank.guildName == currentGuildName then
+            AddInventoryToTotals(totals, guildBank.items, "Guild Bank (" .. guildBank.guildName .. ")")
+        end
         local items = MakeItemList(totals)
         local previousCategory
         for _, item in ipairs(items) do
@@ -253,7 +344,7 @@ local function GetDisplayLines()
     return lines
 end
 
-local function Refresh()
+Refresh = function()
     if not MINE_DB or not MINEFrame or not MINEFrame:IsShown() then
         return
     end
@@ -399,6 +490,42 @@ RuntimeUpdate = function(_, elapsed)
         end
     end
 
+    if guildCheckDelay then
+        guildCheckDelay = guildCheckDelay - elapsed
+        if guildCheckDelay <= 0 then
+            guildCheckDelay = nil
+            RefreshGuildMembership()
+        end
+    end
+
+    if guildTabQueryDelay then
+        guildTabQueryDelay = guildTabQueryDelay - elapsed
+        if guildTabQueryDelay <= 0 then
+            local tabCount = GetNumGuildBankTabs and GetNumGuildBankTabs() or 0
+            if queuedGuildTab and queuedGuildTab <= tabCount and GetGuildBankTabInfo then
+                local _, _, isViewable = GetGuildBankTabInfo(queuedGuildTab)
+                if isViewable ~= false and QueryGuildBankTab then
+                    QueryGuildBankTab(queuedGuildTab)
+                end
+                queuedGuildTab = queuedGuildTab + 1
+                guildTabQueryDelay = 0.4
+            else
+                queuedGuildTab = nil
+                guildTabQueryDelay = nil
+                guildBankRefreshDelay = 0.5
+            end
+        end
+    end
+
+    if guildBankRefreshDelay then
+        guildBankRefreshDelay = guildBankRefreshDelay - elapsed
+        if guildBankRefreshDelay <= 0 then
+            guildBankRefreshDelay = nil
+            ScanGuildBank()
+            Refresh()
+        end
+    end
+
     if #outgoingMessages > 0 then
         sendCooldown = sendCooldown - elapsed
         if sendCooldown <= 0 then
@@ -408,7 +535,8 @@ RuntimeUpdate = function(_, elapsed)
         end
     end
 
-    if not bagRefreshDelay and not loginShareDelay and #outgoingMessages == 0 then
+    if not bagRefreshDelay and not loginShareDelay and not guildCheckDelay
+        and not guildTabQueryDelay and not guildBankRefreshDelay and #outgoingMessages == 0 then
         sendCooldown = 0
         runtimeFrame:SetScript("OnUpdate", nil)
     end
@@ -556,6 +684,11 @@ events:RegisterEvent("PLAYER_LOGOUT")
 events:RegisterEvent("BAG_UPDATE")
 events:RegisterEvent("BANKFRAME_OPENED")
 events:RegisterEvent("BANKFRAME_CLOSED")
+events:RegisterEvent("GUILDBANKFRAME_OPENED")
+events:RegisterEvent("GUILDBANKFRAME_CLOSED")
+events:RegisterEvent("GUILDBANKBAGSLOTS_CHANGED")
+events:RegisterEvent("GUILDBANK_UPDATE_TABS")
+events:RegisterEvent("PLAYER_GUILD_UPDATE")
 events:RegisterEvent("GET_ITEM_INFO_RECEIVED")
 events:RegisterEvent("CHAT_MSG_ADDON")
 events:SetScript("OnEvent", function(_, event, ...)
@@ -566,6 +699,7 @@ events:SetScript("OnEvent", function(_, event, ...)
         MINE_DB = MINE_DB or {}
         MINE_DB.characters = MINE_DB.characters or {}
         MINE_DB.shared = MINE_DB.shared or {}
+        currentGuildName = GetCurrentGuildName()
         MINE_DB.characters[characterKey] = MINE_DB.characters[characterKey] or {
             name = name,
             realm = realm,
@@ -578,6 +712,8 @@ events:SetScript("OnEvent", function(_, event, ...)
         RegisterAddonMessagePrefix(messagePrefix)
         CreateWindow()
         SaveCurrentCharacter()
+        guildCheckDelay = 5
+        runtimeFrame:SetScript("OnUpdate", RuntimeUpdate)
         Refresh()
     elseif event == "BAG_UPDATE" then
         bagRefreshDelay = 0.1
@@ -588,15 +724,51 @@ events:SetScript("OnEvent", function(_, event, ...)
         Refresh()
     elseif event == "BANKFRAME_CLOSED" then
         bankOpen = false
+    elseif event == "GUILDBANKFRAME_OPENED" then
+        RefreshGuildMembership()
+        guildBankOpen = currentGuildName ~= nil
+        if guildBankOpen then
+            MINE_DB.guildBank = MINE_DB.guildBank or { guildName = currentGuildName, items = {} }
+            MINE_DB.guildBank.guildName = currentGuildName
+            queuedGuildTab = 1
+            guildTabQueryDelay = 0
+            guildBankRefreshDelay = 0.5
+            runtimeFrame:SetScript("OnUpdate", RuntimeUpdate)
+        end
+        Refresh()
+    elseif event == "GUILDBANKFRAME_CLOSED" then
+        guildBankOpen = false
+        queuedGuildTab = nil
+        guildTabQueryDelay = nil
+    elseif event == "GUILDBANKBAGSLOTS_CHANGED" then
+        guildBankRefreshDelay = 0.2
+        runtimeFrame:SetScript("OnUpdate", RuntimeUpdate)
+    elseif event == "GUILDBANK_UPDATE_TABS" then
+        if guildBankOpen then
+            queuedGuildTab = 1
+            guildTabQueryDelay = 0
+            runtimeFrame:SetScript("OnUpdate", RuntimeUpdate)
+        end
+    elseif event == "PLAYER_GUILD_UPDATE" then
+        local unit = ...
+        if unit == "player" then
+            guildCheckDelay = 2
+            runtimeFrame:SetScript("OnUpdate", RuntimeUpdate)
+        end
     elseif event == "GET_ITEM_INFO_RECEIVED" then
         local itemId, success = ...
         if success and itemId then
             UpdateSharedItemMetadata(itemId)
+            UpdateGuildBankItemMetadata(itemId)
         end
         bagRefreshDelay = 0.1
+        if guildBankOpen then
+            guildBankRefreshDelay = 0.1
+        end
         runtimeFrame:SetScript("OnUpdate", RuntimeUpdate)
     elseif event == "PLAYER_ENTERING_WORLD" then
         loginShareDelay = 4
+        guildCheckDelay = 5
         runtimeFrame:SetScript("OnUpdate", RuntimeUpdate)
     elseif event == "PLAYER_LOGOUT" then
         SaveCurrentCharacter()

@@ -11,7 +11,7 @@ Use `/mine` to open or close the window.
 - **Account** totals those saved snapshots, shows which characters have each material, and includes the scanned guild bank.
 - **Shared** lists material snapshots received from other MINE users.
 
-Materials are grouped by profession-friendly categories (cloth, leather, metal and stone, herbs, enchanting, gems, elemental, parts, and other trade goods). Within each category, higher item levels appear first. The scan includes trade goods regardless of bind status, so bind-on-pickup crafting materials are included.
+Materials are grouped by profession-friendly categories (cloth, leather, metal and stone, herbs, enchanting, gems, elemental, parts, and other trade goods). Within each category, lower item levels appear first, progressing to higher-level materials for an at-a-glance view of crafting progression. The scan includes trade goods regardless of bind status, so bind-on-pickup crafting materials are included.
 
 Personal bank contents are recorded when the bank is opened. Guild-bank tabs are scanned while the guild bank is open, and their material totals appear in the **Account** view. Guild-bank data is stored for the current guild and cleared when MINE detects that the character leaves or changes guild. MINE cannot inspect a character who has not logged in and scanned their inventory, and account totals are limited to characters sharing this addon's saved variables.
 
@@ -31,4 +31,4 @@ Run:
 .\package.ps1
 ```
 
-The install-ready archive is written to `dist\MINE-0.5.0.zip` and versioned with the source so it is available from the repository. Extract it into the WoW Forever `Interface\AddOns` folder so the addon files are under `Interface\AddOns\MINE`.
+The install-ready archive is written to `dist\MINE-0.6.0.zip` and versioned with the source so it is available from the repository. Extract it into the WoW Forever `Interface\AddOns` folder so the addon files are under `Interface\AddOns\MINE`.

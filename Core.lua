@@ -283,7 +283,7 @@ local function MakeItemList(itemMap)
             end
         end
         if left.level ~= right.level then
-            return left.level > right.level
+            return left.level < right.level
         end
         return string.lower(left.name) < string.lower(right.name)
     end)

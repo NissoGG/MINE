@@ -23,6 +23,26 @@ local categoryOrder = {
     "Parts",
     "Other"
 }
+local professionBrackets = {
+    { label = "Profession Materials: 1-75", maxTier = 2 },
+    { label = "Profession Materials: 75-150", maxTier = 3 },
+    { label = "Profession Materials: 150-225", maxTier = 4 },
+    { label = "Profession Materials: 225-300", maxTier = 6 }
+}
+local enchantingFamilyOrder = {
+    Dust = 1,
+    Essence = 2,
+    Shard = 3,
+    Crystal = 4,
+    Other = 5
+}
+local enchantingFamilyLabels = {
+    Dust = "Dust",
+    Essence = "Essences",
+    Shard = "Shards",
+    Crystal = "Crystals",
+    Other = "Other Enchanting Materials"
+}
 local categoryBySubType = {
     ["Cloth"] = "Cloth",
     ["Leather"] = "Leather",
@@ -446,6 +466,19 @@ local function RefreshGuildMembership()
     end
 end
 
+local function GetEnchantingFamily(name)
+    if name:match("Dust") then
+        return "Dust"
+    elseif name:match("Essence") then
+        return "Essence"
+    elseif name:match("Shard") then
+        return "Shard"
+    elseif name:match("Crystal") then
+        return "Crystal"
+    end
+    return "Other"
+end
+
 local function MakeItemList(itemMap)
     local items = {}
     for itemId, item in pairs(itemMap or {}) do
@@ -465,6 +498,16 @@ local function MakeItemList(itemMap)
                     requestedItemData[itemId] = true
                 end
             end
+            local previewItem = numericItemId and previewItems[numericItemId]
+            local professionTier = previewItem and previewItem.level
+                or math.min(6, math.max(1, math.ceil((tonumber(item.level) or 0) / 15)))
+            local professionBracket
+            for bracketIndex, bracket in ipairs(professionBrackets) do
+                if professionTier and professionTier <= bracket.maxTier then
+                    professionBracket = bracketIndex
+                    break
+                end
+            end
             items[#items + 1] = {
                 id = tonumber(itemId),
                 name = item.name or ("Item " .. tostring(itemId)),
@@ -472,11 +515,15 @@ local function MakeItemList(itemMap)
                 category = item.category or "Other",
                 level = tonumber(item.level) or 0,
                 quality = quality or 1,
-                icon = icon
+                icon = icon,
+                professionBracket = professionBracket or #professionBrackets
             }
         end
     end
     table.sort(items, function(left, right)
+        if left.professionBracket ~= right.professionBracket then
+            return left.professionBracket < right.professionBracket
+        end
         if left.category ~= right.category then
             for _, category in ipairs(categoryOrder) do
                 if left.category == category then
@@ -485,6 +532,20 @@ local function MakeItemList(itemMap)
                     return false
                 end
             end
+        end
+        local leftFamily = left.category == "Enchanting" and GetEnchantingFamily(left.name) or nil
+        local rightFamily = right.category == "Enchanting" and GetEnchantingFamily(right.name) or nil
+        if leftFamily ~= rightFamily then
+            if leftFamily and rightFamily then
+                return enchantingFamilyOrder[leftFamily] < enchantingFamilyOrder[rightFamily]
+            elseif leftFamily then
+                return true
+            elseif rightFamily then
+                return false
+            end
+        end
+        if left.quality ~= right.quality then
+            return left.quality < right.quality
         end
         if left.level ~= right.level then
             return left.level < right.level
@@ -496,11 +557,33 @@ end
 
 local function AddInventoryLines(lines, inventory, owner)
     local items = MakeItemList(inventory)
+    local previousBracket
     local previousCategory
+    local previousFamily
     for _, item in ipairs(items) do
+        if item.professionBracket ~= previousBracket then
+            local bracket = professionBrackets[item.professionBracket]
+            lines[#lines + 1] = {
+                kind = "bracket",
+                text = bracket.label
+            }
+            previousBracket = item.professionBracket
+            previousCategory = nil
+            previousFamily = nil
+        end
         if item.category ~= previousCategory then
-            lines[#lines + 1] = { kind = "header", text = item.category }
+            lines[#lines + 1] = { kind = "header", text = "  " .. item.category }
             previousCategory = item.category
+            previousFamily = nil
+        end
+        if item.category == "Enchanting" then
+            local family = enchantingFamilyLabels[GetEnchantingFamily(item.name)]
+            if family ~= previousFamily then
+                lines[#lines + 1] = { kind = "subheader", text = "    " .. family }
+                previousFamily = family
+            end
+        else
+            previousFamily = nil
         end
         local suffix = owner and ("  [" .. owner .. "]") or ""
         lines[#lines + 1] = {
@@ -622,6 +705,10 @@ Refresh = function()
             row:SetTextColor(1, 0.82, 0)
             if line.kind == "character" then
                 row:SetTextColor(1, 0.82, 0)
+            elseif line.kind == "bracket" then
+                row:SetTextColor(0.45, 0.78, 1)
+            elseif line.kind == "subheader" then
+                row:SetTextColor(0.8, 0.8, 0.8)
             elseif line.kind == "item" then
                 local color = ITEM_QUALITY_COLORS and ITEM_QUALITY_COLORS[line.quality or 1]
                 row:SetTextColor(color and color.r or 1, color and color.g or 1, color and color.b or 1)

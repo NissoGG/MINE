@@ -2,7 +2,7 @@
 ## Title: MINE - Materials In Everyone's Inventory
 ## Notes: Tracks crafting materials by character, account, and guild bank, with automatic sharing.
 ## Author: Nick Gossin
-## Version: 0.9.0
+## Version: 0.10.0
 ## SavedVariables: MINE_DB
 
 Core.lua

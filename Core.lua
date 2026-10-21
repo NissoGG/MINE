@@ -8,6 +8,8 @@ local containerAPI = C_Container
 local getContainerNumSlots = GetContainerNumSlots or (containerAPI and containerAPI.GetContainerNumSlots)
 local getContainerItemLink = GetContainerItemLink or (containerAPI and containerAPI.GetContainerItemLink)
 local getContainerItemInfo = GetContainerItemInfo or (containerAPI and containerAPI.GetContainerItemInfo)
+local itemAPI = C_Item
+local getItemInfo = GetItemInfo or (itemAPI and itemAPI.GetItemInfo)
 local categoryOrder = {
     "Cloth",
     "Leather",
@@ -59,8 +61,33 @@ local function GetItemCategory(itemType, itemSubType)
     return categoryBySubType[itemSubType] or "Other"
 end
 
+local function GetItemDetails(itemId, fallbackInfo)
+    local name, itemLevel, itemType, itemSubType
+    if getItemInfo then
+        local info = { getItemInfo(itemId) }
+        if type(info[1]) == "table" then
+            local item = info[1]
+            name = item.itemName or item.name
+            itemLevel = item.itemLevel
+            itemType = item.itemType
+            itemSubType = item.itemSubType
+        else
+            name = info[1]
+            itemLevel = info[4]
+            itemType = info[6]
+            itemSubType = info[7]
+        end
+    end
+    if fallbackInfo then
+        name = name or fallbackInfo.itemName
+        itemType = itemType or fallbackInfo.itemType
+        itemSubType = itemSubType or fallbackInfo.itemSubType
+    end
+    return name, itemLevel, itemType, itemSubType
+end
+
 local function UpdateItemMetadata(itemId, item)
-    local name, _, _, itemLevel, _, itemType, itemSubType = GetItemInfo(itemId)
+    local name, itemLevel, itemType, itemSubType = GetItemDetails(itemId)
     local category = GetItemCategory(itemType, itemSubType)
     if name then
         item.name = name
@@ -94,10 +121,14 @@ local function ScanContainer(container)
             if not link and type(itemInfo) == "table" then
                 link = itemInfo.hyperlink
             end
-            if link then
-                local itemId = tonumber(link:match("item:(%d+)"))
+            if link or type(itemInfo) == "table" then
+                local itemId = (link and tonumber(link:match("item:(%d+)")))
+                    or (type(itemInfo) == "table" and itemInfo.itemID)
                 local count = type(itemInfo) == "table" and itemInfo.stackCount or legacyCount
-                local name, _, _, itemLevel, _, itemType, itemSubType = GetItemInfo(link)
+                local name, itemLevel, itemType, itemSubType
+                if itemId then
+                    name, itemLevel, itemType, itemSubType = GetItemDetails(itemId, itemInfo)
+                end
                 local category = GetItemCategory(itemType, itemSubType)
                 if itemId and name and category then
                     local item = items[itemId]
@@ -171,7 +202,10 @@ local function ScanGuildBank()
                 local link = GetGuildBankItemLink(tab, slot)
                 if link and count and count > 0 then
                     local itemId = tonumber(link:match("item:(%d+)"))
-                    local name, _, _, itemLevel, _, itemType, itemSubType = GetItemInfo(link)
+                    local name, itemLevel, itemType, itemSubType
+                    if itemId then
+                        name, itemLevel, itemType, itemSubType = GetItemDetails(itemId)
+                    end
                     local category = GetItemCategory(itemType, itemSubType)
                     if itemId and name and category then
                         local item = items[itemId]

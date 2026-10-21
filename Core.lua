@@ -1,6 +1,13 @@
 local messagePrefix = "MINE"
 local rowHeight = 20
 local tradeGoodsType = GetItemClassInfo and GetItemClassInfo(7)
+local chatInfoAPI = C_ChatInfo
+local registerAddonMessagePrefix = RegisterAddonMessagePrefix or (chatInfoAPI and chatInfoAPI.RegisterAddonMessagePrefix)
+local sendAddonMessage = SendAddonMessage or (chatInfoAPI and chatInfoAPI.SendAddonMessage)
+local containerAPI = C_Container
+local getContainerNumSlots = GetContainerNumSlots or (containerAPI and containerAPI.GetContainerNumSlots)
+local getContainerItemLink = GetContainerItemLink or (containerAPI and containerAPI.GetContainerItemLink)
+local getContainerItemInfo = GetContainerItemInfo or (containerAPI and containerAPI.GetContainerItemInfo)
 local categoryOrder = {
     "Cloth",
     "Leather",
@@ -81,11 +88,15 @@ end
 local function ScanContainer(container)
     local items = {}
     local function scanBag(bag)
-        for slot = 1, (GetContainerNumSlots(bag) or 0) do
-            local link = GetContainerItemLink(bag, slot)
+        for slot = 1, (getContainerNumSlots(bag) or 0) do
+            local itemInfo, legacyCount = getContainerItemInfo(bag, slot)
+            local link = getContainerItemLink(bag, slot)
+            if not link and type(itemInfo) == "table" then
+                link = itemInfo.hyperlink
+            end
             if link then
                 local itemId = tonumber(link:match("item:(%d+)"))
-                local _, count = GetContainerItemInfo(bag, slot)
+                local count = type(itemInfo) == "table" and itemInfo.stackCount or legacyCount
                 local name, _, _, itemLevel, _, itemType, itemSubType = GetItemInfo(link)
                 local category = GetItemCategory(itemType, itemSubType)
                 if itemId and name and category then
@@ -459,7 +470,7 @@ local function SendSnapshot(immediate)
     end
     if immediate then
         for _, outgoing in ipairs(outgoingMessages) do
-            SendAddonMessage(messagePrefix, outgoing.message, outgoing.channel)
+            sendAddonMessage(messagePrefix, outgoing.message, outgoing.channel)
         end
         wipe(outgoingMessages)
         sendCooldown = 0
@@ -530,7 +541,7 @@ RuntimeUpdate = function(_, elapsed)
         sendCooldown = sendCooldown - elapsed
         if sendCooldown <= 0 then
             local outgoing = table.remove(outgoingMessages, 1)
-            SendAddonMessage(messagePrefix, outgoing.message, outgoing.channel)
+            sendAddonMessage(messagePrefix, outgoing.message, outgoing.channel)
             sendCooldown = 0.15
         end
     end
@@ -709,7 +720,7 @@ events:SetScript("OnEvent", function(_, event, ...)
         local character = MINE_DB.characters[characterKey]
         character.name = name
         character.realm = realm
-        RegisterAddonMessagePrefix(messagePrefix)
+        registerAddonMessagePrefix(messagePrefix)
         CreateWindow()
         SaveCurrentCharacter()
         guildCheckDelay = 5

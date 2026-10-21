@@ -515,9 +515,11 @@ Refresh = function()
         row:SetWidth(480)
         row:SetHeight(rowHeight)
         row:SetJustifyH("LEFT")
-        row.icon = content:CreateTexture(nil, "ARTWORK")
-        row.icon:SetSize(18, 18)
-        row.icon:SetPoint("TOPLEFT", content, "TOPLEFT", 2, -((index - 1) * rowHeight) - 1)
+        if not row.icon then
+            row.icon = content:CreateTexture(nil, "ARTWORK")
+            row.icon:SetSize(18, 18)
+            row.icon:SetPoint("TOPLEFT", content, "TOPLEFT", 2, -((index - 1) * rowHeight) - 1)
+        end
         MINEFrame.rows[index] = row
     end
     for index, row in ipairs(MINEFrame.rows) do
@@ -530,20 +532,22 @@ Refresh = function()
             elseif line.kind == "item" then
                 local color = ITEM_QUALITY_COLORS and ITEM_QUALITY_COLORS[line.quality or 1]
                 row:SetTextColor(color and color.r or 1, color and color.g or 1, color and color.b or 1)
-                if line.icon then
+                if line.icon and row.icon then
                     row.icon:SetTexture(line.icon)
                     row.icon:Show()
-                else
+                elseif row.icon then
                     row.icon:Hide()
                 end
-            else
+            elseif row.icon then
                 row.icon:Hide()
             end
             row.itemId = line.itemId
             row:Show()
         else
             row:Hide()
-            row.icon:Hide()
+            if row.icon then
+                row.icon:Hide()
+            end
         end
     end
     MINEFrame.emptyText:SetShown(#lines == 0)
@@ -905,6 +909,9 @@ local function CreateWindow()
         row:SetWidth(460)
         row:SetHeight(rowHeight)
         row:SetJustifyH("LEFT")
+        row.icon = content:CreateTexture(nil, "ARTWORK")
+        row.icon:SetSize(18, 18)
+        row.icon:SetPoint("TOPLEFT", content, "TOPLEFT", 2, -((index - 1) * rowHeight) - 1)
         frame.rows[index] = row
     end
 

@@ -35,6 +35,66 @@ local categoryBySubType = {
     ["Explosives"] = "Parts",
     ["Devices"] = "Parts"
 }
+local previewItems = {
+    ["preview-linen"] = { name = "Linen Cloth", count = 1, category = "Cloth", level = 1 },
+    ["preview-wool"] = { name = "Wool Cloth", count = 1, category = "Cloth", level = 2 },
+    ["preview-silk"] = { name = "Silk Cloth", count = 1, category = "Cloth", level = 3 },
+    ["preview-mageweave"] = { name = "Mageweave Cloth", count = 1, category = "Cloth", level = 4 },
+    ["preview-runecloth"] = { name = "Runecloth", count = 1, category = "Cloth", level = 5 },
+    ["preview-netherweave"] = { name = "Netherweave Cloth", count = 1, category = "Cloth", level = 6 },
+    ["preview-frostweave"] = { name = "Frostweave Cloth", count = 1, category = "Cloth", level = 7 },
+    ["preview-ruined-leather"] = { name = "Ruined Leather Scraps", count = 1, category = "Leather", level = 1 },
+    ["preview-light-leather"] = { name = "Light Leather", count = 1, category = "Leather", level = 2 },
+    ["preview-medium-leather"] = { name = "Medium Leather", count = 1, category = "Leather", level = 3 },
+    ["preview-heavy-leather"] = { name = "Heavy Leather", count = 1, category = "Leather", level = 4 },
+    ["preview-thick-leather"] = { name = "Thick Leather", count = 1, category = "Leather", level = 5 },
+    ["preview-rugged-leather"] = { name = "Rugged Leather", count = 1, category = "Leather", level = 6 },
+    ["preview-borean-leather"] = { name = "Borean Leather", count = 1, category = "Leather", level = 8 },
+    ["preview-copper"] = { name = "Copper Ore", count = 1, category = "Metal & Stone", level = 1 },
+    ["preview-tin"] = { name = "Tin Ore", count = 1, category = "Metal & Stone", level = 2 },
+    ["preview-bronze"] = { name = "Bronze Bar", count = 1, category = "Metal & Stone", level = 3 },
+    ["preview-iron"] = { name = "Iron Ore", count = 1, category = "Metal & Stone", level = 4 },
+    ["preview-mithril"] = { name = "Mithril Ore", count = 1, category = "Metal & Stone", level = 5 },
+    ["preview-thorium"] = { name = "Thorium Ore", count = 1, category = "Metal & Stone", level = 6 },
+    ["preview-cobalt"] = { name = "Cobalt Ore", count = 1, category = "Metal & Stone", level = 7 },
+    ["preview-saronite"] = { name = "Saronite Ore", count = 1, category = "Metal & Stone", level = 8 },
+    ["preview-peacebloom"] = { name = "Peacebloom", count = 1, category = "Herbs", level = 1 },
+    ["preview-silverleaf"] = { name = "Silverleaf", count = 1, category = "Herbs", level = 1 },
+    ["preview-mageroyal"] = { name = "Mageroyal", count = 1, category = "Herbs", level = 2 },
+    ["preview-briarthorn"] = { name = "Briarthorn", count = 1, category = "Herbs", level = 3 },
+    ["preview-sungrass"] = { name = "Sungrass", count = 1, category = "Herbs", level = 4 },
+    ["preview-dreamfoil"] = { name = "Dreamfoil", count = 1, category = "Herbs", level = 5 },
+    ["preview-felweed"] = { name = "Felweed", count = 1, category = "Herbs", level = 6 },
+    ["preview-goldclover"] = { name = "Goldclover", count = 1, category = "Herbs", level = 7 },
+    ["preview-lichbloom"] = { name = "Lichbloom", count = 1, category = "Herbs", level = 8 },
+    ["preview-strange-dust"] = { name = "Strange Dust", count = 1, category = "Enchanting", level = 1 },
+    ["preview-soul-dust"] = { name = "Soul Dust", count = 1, category = "Enchanting", level = 2 },
+    ["preview-vision-dust"] = { name = "Vision Dust", count = 1, category = "Enchanting", level = 3 },
+    ["preview-dream-dust"] = { name = "Dream Dust", count = 1, category = "Enchanting", level = 4 },
+    ["preview-arcane-dust"] = { name = "Arcane Dust", count = 1, category = "Enchanting", level = 5 },
+    ["preview-infinite-dust"] = { name = "Infinite Dust", count = 1, category = "Enchanting", level = 7 },
+    ["preview-malachite"] = { name = "Malachite", count = 1, category = "Gems", level = 1 },
+    ["preview-moss-agate"] = { name = "Moss Agate", count = 1, category = "Gems", level = 2 },
+    ["preview-aquamarine"] = { name = "Aquamarine", count = 1, category = "Gems", level = 3 },
+    ["preview-star-ruby"] = { name = "Star Ruby", count = 1, category = "Gems", level = 4 },
+    ["preview-talasite"] = { name = "Talasite", count = 1, category = "Gems", level = 6 },
+    ["preview-scarlet-ruby"] = { name = "Scarlet Ruby", count = 1, category = "Gems", level = 7 },
+    ["preview-primordial-saronite"] = { name = "Primordial Saronite", count = 1, category = "Gems", level = 8 },
+    ["preview-elemental-earth"] = { name = "Elemental Earth", count = 1, category = "Elemental", level = 1 },
+    ["preview-elemental-water"] = { name = "Elemental Water", count = 1, category = "Elemental", level = 2 },
+    ["preview-mote-of-fire"] = { name = "Mote of Fire", count = 1, category = "Elemental", level = 3 },
+    ["preview-primal-fire"] = { name = "Primal Fire", count = 1, category = "Elemental", level = 5 },
+    ["preview-crystallized-earth"] = { name = "Crystallized Earth", count = 1, category = "Elemental", level = 7 },
+    ["preview-eternal-earth"] = { name = "Eternal Earth", count = 1, category = "Elemental", level = 8 },
+    ["preview-bronze-tube"] = { name = "Bronze Tube", count = 1, category = "Parts", level = 2 },
+    ["preview-solid-blasting-powder"] = { name = "Solid Blasting Powder", count = 1, category = "Parts", level = 4 },
+    ["preview-handful-cobalt-bolts"] = { name = "Handful of Cobalt Bolts", count = 1, category = "Parts", level = 7 },
+    ["preview-froststeel-tube"] = { name = "Froststeel Tube", count = 1, category = "Parts", level = 8 },
+    ["preview-small-flame-sac"] = { name = "Small Flame Sac", count = 1, category = "Other", level = 1 },
+    ["preview-silk-thread"] = { name = "Silk Thread", count = 1, category = "Other", level = 3 },
+    ["preview-rune-thread"] = { name = "Rune Thread", count = 1, category = "Other", level = 5 },
+    ["preview-arctic-fur"] = { name = "Arctic Fur", count = 1, category = "Other", level = 8 }
+}
 local activeTab = "character"
 local characterKey
 local bankOpen = false
@@ -348,6 +408,8 @@ local function GetDisplayLines()
             AddInventoryLines(lines, entry.items)
             AddInventoryLines(lines, entry.bankItems, "Bank")
         end
+        lines[#lines + 1] = { kind = "character", text = "Material Preview - Sample data (not a saved character)" }
+        AddInventoryLines(lines, previewItems)
     elseif activeTab == "account" then
         local totals = {}
         for _, entry in pairs(MINE_DB.characters) do

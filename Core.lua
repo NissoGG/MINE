@@ -37,53 +37,162 @@ local categoryBySubType = {
     ["Explosives"] = "Parts",
     ["Devices"] = "Parts"
 }
+local vendorMaterialIDs = {
+    [2320] = true,
+    [2321] = true,
+    [2324] = true,
+    [2325] = true,
+    [2326] = true,
+    [2604] = true,
+    [2605] = true,
+    [2880] = true,
+    [3466] = true,
+    [4291] = true,
+    [4340] = true,
+    [4341] = true,
+    [4342] = true,
+    [4400] = true,
+    [6260] = true,
+    [8343] = true,
+    [14341] = true,
+    [18567] = true
+}
 local previewItems = {
     [2589] = { name = "Linen Cloth", count = 1, category = "Cloth", level = 1 },
     [2592] = { name = "Wool Cloth", count = 1, category = "Cloth", level = 2 },
     [4306] = { name = "Silk Cloth", count = 1, category = "Cloth", level = 3 },
     [4338] = { name = "Mageweave Cloth", count = 1, category = "Cloth", level = 4 },
+    [14256] = { name = "Felcloth", count = 1, category = "Cloth", level = 5 },
     [14047] = { name = "Runecloth", count = 1, category = "Cloth", level = 5 },
+    [14342] = { name = "Mooncloth", count = 1, category = "Cloth", level = 6 },
     [2934] = { name = "Ruined Leather Scraps", count = 1, category = "Leather", level = 1 },
+    [783] = { name = "Light Hide", count = 1, category = "Leather", level = 2 },
     [2318] = { name = "Light Leather", count = 1, category = "Leather", level = 2 },
+    [4232] = { name = "Medium Hide", count = 1, category = "Leather", level = 3 },
     [2319] = { name = "Medium Leather", count = 1, category = "Leather", level = 3 },
+    [4233] = { name = "Heavy Hide", count = 1, category = "Leather", level = 4 },
     [4234] = { name = "Heavy Leather", count = 1, category = "Leather", level = 4 },
+    [8169] = { name = "Thick Hide", count = 1, category = "Leather", level = 5 },
     [4304] = { name = "Thick Leather", count = 1, category = "Leather", level = 5 },
+    [17012] = { name = "Core Leather", count = 1, category = "Leather", level = 6 },
     [8170] = { name = "Rugged Leather", count = 1, category = "Leather", level = 6 },
+    [2775] = { name = "Silver Ore", count = 1, category = "Metal & Stone", level = 2 },
+    [2776] = { name = "Gold Ore", count = 1, category = "Metal & Stone", level = 3 },
     [2770] = { name = "Copper Ore", count = 1, category = "Metal & Stone", level = 1 },
     [2771] = { name = "Tin Ore", count = 1, category = "Metal & Stone", level = 2 },
+    [2840] = { name = "Copper Bar", count = 1, category = "Metal & Stone", level = 1 },
+    [3576] = { name = "Tin Bar", count = 1, category = "Metal & Stone", level = 2 },
     [2841] = { name = "Bronze Bar", count = 1, category = "Metal & Stone", level = 3 },
     [2772] = { name = "Iron Ore", count = 1, category = "Metal & Stone", level = 4 },
+    [3575] = { name = "Iron Bar", count = 1, category = "Metal & Stone", level = 4 },
+    [3577] = { name = "Gold Bar", count = 1, category = "Metal & Stone", level = 4 },
+    [3859] = { name = "Steel Bar", count = 1, category = "Metal & Stone", level = 4 },
+    [7911] = { name = "Truesilver Ore", count = 1, category = "Metal & Stone", level = 5 },
+    [6037] = { name = "Truesilver Bar", count = 1, category = "Metal & Stone", level = 5 },
     [3858] = { name = "Mithril Ore", count = 1, category = "Metal & Stone", level = 5 },
+    [3860] = { name = "Mithril Bar", count = 1, category = "Metal & Stone", level = 5 },
+    [11370] = { name = "Dark Iron Ore", count = 1, category = "Metal & Stone", level = 6 },
+    [11371] = { name = "Dark Iron Bar", count = 1, category = "Metal & Stone", level = 6 },
     [10620] = { name = "Thorium Ore", count = 1, category = "Metal & Stone", level = 6 },
+    [12359] = { name = "Thorium Bar", count = 1, category = "Metal & Stone", level = 6 },
+    [12360] = { name = "Arcanite Bar", count = 1, category = "Metal & Stone", level = 6 },
+    [17771] = { name = "Elementium Bar", count = 1, category = "Metal & Stone", level = 6 },
+    [2835] = { name = "Rough Stone", count = 1, category = "Metal & Stone", level = 1 },
+    [2836] = { name = "Coarse Stone", count = 1, category = "Metal & Stone", level = 2 },
+    [2838] = { name = "Heavy Stone", count = 1, category = "Metal & Stone", level = 3 },
+    [7912] = { name = "Solid Stone", count = 1, category = "Metal & Stone", level = 4 },
+    [12365] = { name = "Dense Stone", count = 1, category = "Metal & Stone", level = 5 },
     [2447] = { name = "Peacebloom", count = 1, category = "Herbs", level = 1 },
     [765] = { name = "Silverleaf", count = 1, category = "Herbs", level = 1 },
+    [2449] = { name = "Earthroot", count = 1, category = "Herbs", level = 1 },
     [785] = { name = "Mageroyal", count = 1, category = "Herbs", level = 2 },
     [2450] = { name = "Briarthorn", count = 1, category = "Herbs", level = 3 },
+    [2452] = { name = "Swiftthistle", count = 1, category = "Herbs", level = 3 },
+    [3820] = { name = "Stranglekelp", count = 1, category = "Herbs", level = 3 },
+    [2453] = { name = "Bruiseweed", count = 1, category = "Herbs", level = 3 },
+    [3355] = { name = "Wild Steelbloom", count = 1, category = "Herbs", level = 4 },
+    [3369] = { name = "Grave Moss", count = 1, category = "Herbs", level = 4 },
+    [3356] = { name = "Kingsblood", count = 1, category = "Herbs", level = 4 },
+    [3357] = { name = "Liferoot", count = 1, category = "Herbs", level = 4 },
+    [3818] = { name = "Fadeleaf", count = 1, category = "Herbs", level = 5 },
+    [3358] = { name = "Khadgar's Whisker", count = 1, category = "Herbs", level = 5 },
+    [3819] = { name = "Wintersbite", count = 1, category = "Herbs", level = 5 },
+    [4625] = { name = "Firebloom", count = 1, category = "Herbs", level = 5 },
+    [8831] = { name = "Purple Lotus", count = 1, category = "Herbs", level = 5 },
+    [8836] = { name = "Arthas' Tears", count = 1, category = "Herbs", level = 6 },
     [8838] = { name = "Sungrass", count = 1, category = "Herbs", level = 4 },
+    [8839] = { name = "Blindweed", count = 1, category = "Herbs", level = 6 },
+    [8845] = { name = "Ghost Mushroom", count = 1, category = "Herbs", level = 6 },
+    [8846] = { name = "Gromsblood", count = 1, category = "Herbs", level = 6 },
+    [13464] = { name = "Golden Sansam", count = 1, category = "Herbs", level = 6 },
     [13463] = { name = "Dreamfoil", count = 1, category = "Herbs", level = 5 },
+    [13465] = { name = "Mountain Silversage", count = 1, category = "Herbs", level = 6 },
     [13466] = { name = "Plaguebloom", count = 1, category = "Herbs", level = 6 },
+    [13467] = { name = "Icecap", count = 1, category = "Herbs", level = 6 },
+    [13468] = { name = "Black Lotus", count = 1, category = "Herbs", level = 6 },
     [10940] = { name = "Strange Dust", count = 1, category = "Enchanting", level = 1 },
     [11083] = { name = "Soul Dust", count = 1, category = "Enchanting", level = 2 },
     [11137] = { name = "Vision Dust", count = 1, category = "Enchanting", level = 3 },
     [11176] = { name = "Dream Dust", count = 1, category = "Enchanting", level = 4 },
     [16204] = { name = "Illusion Dust", count = 1, category = "Enchanting", level = 5 },
+    [10938] = { name = "Lesser Magic Essence", count = 1, category = "Enchanting", level = 1 },
+    [10939] = { name = "Greater Magic Essence", count = 1, category = "Enchanting", level = 1 },
+    [10998] = { name = "Lesser Astral Essence", count = 1, category = "Enchanting", level = 2 },
+    [11082] = { name = "Greater Astral Essence", count = 1, category = "Enchanting", level = 2 },
+    [11134] = { name = "Lesser Mystic Essence", count = 1, category = "Enchanting", level = 3 },
+    [11135] = { name = "Greater Mystic Essence", count = 1, category = "Enchanting", level = 3 },
+    [11174] = { name = "Lesser Nether Essence", count = 1, category = "Enchanting", level = 4 },
+    [11175] = { name = "Greater Nether Essence", count = 1, category = "Enchanting", level = 4 },
+    [16202] = { name = "Lesser Eternal Essence", count = 1, category = "Enchanting", level = 5 },
+    [16203] = { name = "Greater Eternal Essence", count = 1, category = "Enchanting", level = 5 },
+    [10978] = { name = "Small Glimmering Shard", count = 1, category = "Enchanting", level = 1 },
+    [11084] = { name = "Large Glimmering Shard", count = 1, category = "Enchanting", level = 1 },
+    [11138] = { name = "Small Glowing Shard", count = 1, category = "Enchanting", level = 2 },
+    [11139] = { name = "Large Glowing Shard", count = 1, category = "Enchanting", level = 2 },
+    [11177] = { name = "Small Radiant Shard", count = 1, category = "Enchanting", level = 3 },
+    [11178] = { name = "Large Radiant Shard", count = 1, category = "Enchanting", level = 3 },
+    [14343] = { name = "Small Brilliant Shard", count = 1, category = "Enchanting", level = 4 },
+    [14344] = { name = "Large Brilliant Shard", count = 1, category = "Enchanting", level = 4 },
+    [20725] = { name = "Nexus Crystal", count = 1, category = "Enchanting", level = 5 },
     [774] = { name = "Malachite", count = 1, category = "Gems", level = 1 },
     [818] = { name = "Tigerseye", count = 1, category = "Gems", level = 1 },
+    [1210] = { name = "Shadowgem", count = 1, category = "Gems", level = 1 },
     [1206] = { name = "Moss Agate", count = 1, category = "Gems", level = 2 },
+    [1529] = { name = "Jade", count = 1, category = "Gems", level = 2 },
+    [1705] = { name = "Lesser Moonstone", count = 1, category = "Gems", level = 2 },
+    [3864] = { name = "Citrine", count = 1, category = "Gems", level = 3 },
     [7909] = { name = "Aquamarine", count = 1, category = "Gems", level = 3 },
     [7910] = { name = "Star Ruby", count = 1, category = "Gems", level = 4 },
+    [12361] = { name = "Blue Sapphire", count = 1, category = "Gems", level = 5 },
+    [12363] = { name = "Arcane Crystal", count = 1, category = "Gems", level = 5 },
+    [12364] = { name = "Huge Emerald", count = 1, category = "Gems", level = 5 },
+    [12799] = { name = "Large Opal", count = 1, category = "Gems", level = 5 },
     [12800] = { name = "Azerothian Diamond", count = 1, category = "Gems", level = 5 },
+    [11382] = { name = "Blood of the Mountain", count = 1, category = "Other", level = 6 },
     [7067] = { name = "Elemental Earth", count = 1, category = "Elemental", level = 1 },
     [7068] = { name = "Elemental Fire", count = 1, category = "Elemental", level = 2 },
     [7070] = { name = "Elemental Water", count = 1, category = "Elemental", level = 3 },
     [7069] = { name = "Elemental Air", count = 1, category = "Elemental", level = 4 },
+    [7076] = { name = "Essence of Earth", count = 1, category = "Elemental", level = 2 },
+    [7077] = { name = "Heart of Fire", count = 1, category = "Elemental", level = 3 },
+    [7078] = { name = "Essence of Fire", count = 1, category = "Elemental", level = 3 },
+    [7079] = { name = "Globe of Water", count = 1, category = "Elemental", level = 4 },
+    [7080] = { name = "Essence of Water", count = 1, category = "Elemental", level = 4 },
+    [7081] = { name = "Breath of Wind", count = 1, category = "Elemental", level = 5 },
+    [7082] = { name = "Essence of Air", count = 1, category = "Elemental", level = 5 },
+    [12803] = { name = "Essence of Life", count = 1, category = "Elemental", level = 6 },
+    [12808] = { name = "Essence of Undeath", count = 1, category = "Elemental", level = 6 },
+    [17010] = { name = "Fiery Core", count = 1, category = "Elemental", level = 6 },
+    [17011] = { name = "Lava Core", count = 1, category = "Elemental", level = 6 },
+    [12804] = { name = "Powerful Mojo", count = 1, category = "Other", level = 6 },
+    [12811] = { name = "Righteous Orb", count = 1, category = "Other", level = 6 },
+    [3182] = { name = "Spider's Silk", count = 1, category = "Other", level = 2 },
+    [4337] = { name = "Thick Spider's Silk", count = 1, category = "Other", level = 4 },
+    [14227] = { name = "Ironweb Spider Silk", count = 1, category = "Other", level = 6 },
     [4371] = { name = "Bronze Tube", count = 1, category = "Parts", level = 2 },
     [4377] = { name = "Heavy Blasting Powder", count = 1, category = "Parts", level = 4 },
     [15992] = { name = "Dense Blasting Powder", count = 1, category = "Parts", level = 6 },
     [15994] = { name = "Thorium Widget", count = 1, category = "Parts", level = 6 },
-    [17034] = { name = "Maple Seed", count = 1, category = "Other", level = 1 },
-    [4291] = { name = "Silken Thread", count = 1, category = "Other", level = 3 },
-    [14341] = { name = "Rune Thread", count = 1, category = "Other", level = 5 },
     [8171] = { name = "Rugged Hide", count = 1, category = "Leather", level = 6 }
 }
 local activeTab = "character"
@@ -340,17 +449,19 @@ end
 local function MakeItemList(itemMap)
     local items = {}
     for itemId, item in pairs(itemMap or {}) do
-        if selectedCategory == "All" or (item.category or "Other") == selectedCategory then
+        local numericItemId = tonumber(itemId)
+        if (not numericItemId or not vendorMaterialIDs[numericItemId])
+            and (selectedCategory == "All" or (item.category or "Other") == selectedCategory) then
             local quality = tonumber(item.quality)
             local icon = item.icon
-            if (not quality or not icon) and tonumber(itemId) then
-                local _, _, _, _, itemQuality, itemIcon = GetItemDetails(tonumber(itemId))
+            if (not quality or not icon) and numericItemId then
+                local _, _, _, _, itemQuality, itemIcon = GetItemDetails(numericItemId)
                 quality = quality or tonumber(itemQuality)
                 icon = icon or itemIcon
                 item.quality = quality
                 item.icon = icon
                 if (not quality or not icon) and requestLoadItemDataByID and not requestedItemData[itemId] then
-                    requestLoadItemDataByID(tonumber(itemId))
+                    requestLoadItemDataByID(numericItemId)
                     requestedItemData[itemId] = true
                 end
             end
@@ -381,28 +492,6 @@ local function MakeItemList(itemMap)
         return string.lower(left.name) < string.lower(right.name)
     end)
     return items
-end
-
-local function AddInventoryToTotals(totals, inventory, characterName)
-    for itemId, item in pairs(inventory or {}) do
-        local total = totals[itemId]
-        if not total then
-            totals[itemId] = {
-                name = item.name,
-                count = 0,
-                category = item.category,
-                level = item.level,
-                quality = item.quality,
-                icon = item.icon,
-                owners = {}
-            }
-            total = totals[itemId]
-        end
-        total.count = total.count + (tonumber(item.count) or 0)
-        if characterName then
-            total.owners[#total.owners + 1] = characterName .. " x" .. tostring(item.count)
-        end
-    end
 end
 
 local function AddInventoryLines(lines, inventory, owner)
@@ -458,30 +547,16 @@ local function GetDisplayLines()
             end
         end
     elseif activeTab == "account" then
-        local totals = {}
-        for _, entry in pairs(MINE_DB.characters) do
-            local ownerName = entry.name .. " (" .. entry.realm .. ")"
-            AddInventoryToTotals(totals, entry.items, ownerName)
-            AddInventoryToTotals(totals, entry.bankItems, ownerName .. " bank")
+        for _, key in ipairs(GetCharacterKeys()) do
+            local entry = MINE_DB.characters[key]
+            lines[#lines + 1] = { kind = "character", text = entry.name .. " - " .. entry.realm }
+            AddInventoryLines(lines, entry.items)
+            AddInventoryLines(lines, entry.bankItems, "Bank")
         end
         local guildBank = MINE_DB.guildBank
         if guildBank and guildBank.guildName == currentGuildName then
-            AddInventoryToTotals(totals, guildBank.items, "Guild Bank (" .. guildBank.guildName .. ")")
-        end
-        local items = MakeItemList(totals)
-        local previousCategory
-        for _, item in ipairs(items) do
-            if item.category ~= previousCategory then
-                lines[#lines + 1] = { kind = "header", text = item.category }
-                previousCategory = item.category
-            end
-            lines[#lines + 1] = {
-                kind = "item",
-                text = item.name .. "  x" .. item.count .. "  (" .. table.concat(totals[item.id].owners, ", ") .. ")",
-                itemId = item.id,
-                quality = item.quality,
-                icon = item.icon
-            }
+            lines[#lines + 1] = { kind = "character", text = "Guild Bank - " .. guildBank.guildName }
+            AddInventoryLines(lines, guildBank.items)
         end
     else
         local senders = {}
@@ -500,6 +575,34 @@ local function GetDisplayLines()
     return lines
 end
 
+local function CreateDisplayRow(content, index)
+    local row = content:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    row:SetPoint("TOPLEFT", content, "TOPLEFT", 24, -((index - 1) * rowHeight))
+    row:SetWidth(480)
+    row:SetHeight(rowHeight)
+    row:SetJustifyH("LEFT")
+
+    local iconButton = CreateFrame("Button", nil, content)
+    iconButton:SetSize(18, 18)
+    iconButton:SetPoint("TOPLEFT", content, "TOPLEFT", 2, -((index - 1) * rowHeight) - 1)
+    iconButton.icon = iconButton:CreateTexture(nil, "ARTWORK")
+    iconButton.icon:SetAllPoints(iconButton)
+    iconButton:SetScript("OnEnter", function(self)
+        if self.itemId and GameTooltip and GameTooltip.SetHyperlink then
+            GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+            GameTooltip:SetHyperlink("item:" .. self.itemId)
+            GameTooltip:Show()
+        end
+    end)
+    iconButton:SetScript("OnLeave", function()
+        if GameTooltip then
+            GameTooltip:Hide()
+        end
+    end)
+    row.iconButton = iconButton
+    return row
+end
+
 Refresh = function()
     if not MINE_DB or not MINEFrame or not MINEFrame:IsShown() then
         return
@@ -510,17 +613,7 @@ Refresh = function()
     content:SetHeight(math.max(#lines * rowHeight, 1))
     while #MINEFrame.rows < #lines do
         local index = #MINEFrame.rows + 1
-        local row = content:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-        row:SetPoint("TOPLEFT", content, "TOPLEFT", 24, -((index - 1) * rowHeight))
-        row:SetWidth(480)
-        row:SetHeight(rowHeight)
-        row:SetJustifyH("LEFT")
-        if not row.icon then
-            row.icon = content:CreateTexture(nil, "ARTWORK")
-            row.icon:SetSize(18, 18)
-            row.icon:SetPoint("TOPLEFT", content, "TOPLEFT", 2, -((index - 1) * rowHeight) - 1)
-        end
-        MINEFrame.rows[index] = row
+        MINEFrame.rows[index] = CreateDisplayRow(content, index)
     end
     for index, row in ipairs(MINEFrame.rows) do
         local line = lines[index]
@@ -532,22 +625,24 @@ Refresh = function()
             elseif line.kind == "item" then
                 local color = ITEM_QUALITY_COLORS and ITEM_QUALITY_COLORS[line.quality or 1]
                 row:SetTextColor(color and color.r or 1, color and color.g or 1, color and color.b or 1)
-                if line.icon and row.icon then
-                    row.icon:SetTexture(line.icon)
-                    row.icon:Show()
-                elseif row.icon then
-                    row.icon:Hide()
+                if line.icon then
+                    row.iconButton.icon:SetTexture(line.icon)
+                    row.iconButton.itemId = line.itemId
+                    row.iconButton:Show()
+                else
+                    row.iconButton.itemId = nil
+                    row.iconButton:Hide()
                 end
-            elseif row.icon then
-                row.icon:Hide()
+            else
+                row.iconButton.itemId = nil
+                row.iconButton:Hide()
             end
             row.itemId = line.itemId
             row:Show()
         else
             row:Hide()
-            if row.icon then
-                row.icon:Hide()
-            end
+            row.iconButton.itemId = nil
+            row.iconButton:Hide()
         end
     end
     MINEFrame.emptyText:SetShown(#lines == 0)
@@ -904,15 +999,7 @@ local function CreateWindow()
     frame.content = content
     frame.rows = {}
     for index = 1, 120 do
-        local row = content:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-        row:SetPoint("TOPLEFT", content, "TOPLEFT", 2, -((index - 1) * rowHeight))
-        row:SetWidth(460)
-        row:SetHeight(rowHeight)
-        row:SetJustifyH("LEFT")
-        row.icon = content:CreateTexture(nil, "ARTWORK")
-        row.icon:SetSize(18, 18)
-        row.icon:SetPoint("TOPLEFT", content, "TOPLEFT", 2, -((index - 1) * rowHeight) - 1)
-        frame.rows[index] = row
+        frame.rows[index] = CreateDisplayRow(content, index)
     end
 
     frame.emptyText = content:CreateFontString(nil, "OVERLAY", "GameFontDisable")

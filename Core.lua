@@ -43,6 +43,31 @@ local enchantingFamilyLabels = {
     Crystal = "Crystals",
     Other = "Other Enchanting Materials"
 }
+local elementalFamilyOrder = {
+    Essence = 1,
+    Reagent = 2
+}
+local elementalFamilyLabels = {
+    Essence = "Elemental Essences",
+    Reagent = "Other Elemental Reagents"
+}
+local materialConversions = {
+    [2770] = 2840,
+    [2771] = 3576,
+    [2772] = 3575,
+    [2775] = 2842,
+    [2776] = 3577,
+    [3858] = 3860,
+    [7911] = 6037,
+    [10620] = 12359,
+    [11370] = 11371,
+    [2934] = 2318,
+    [783] = 4231,
+    [4232] = 4235,
+    [4233] = 4236,
+    [8169] = 8167,
+    [8171] = 15407
+}
 local categoryBySubType = {
     ["Cloth"] = "Cloth",
     ["Leather"] = "Leather",
@@ -88,20 +113,26 @@ local previewItems = {
     [2934] = { name = "Ruined Leather Scraps", count = 1, category = "Leather", level = 1 },
     [783] = { name = "Light Hide", count = 1, category = "Leather", level = 2 },
     [2318] = { name = "Light Leather", count = 1, category = "Leather", level = 2 },
+    [4231] = { name = "Cured Light Hide", count = 1, category = "Leather", level = 2 },
     [4232] = { name = "Medium Hide", count = 1, category = "Leather", level = 3 },
     [2319] = { name = "Medium Leather", count = 1, category = "Leather", level = 3 },
+    [4235] = { name = "Cured Medium Hide", count = 1, category = "Leather", level = 3 },
     [4233] = { name = "Heavy Hide", count = 1, category = "Leather", level = 4 },
     [4234] = { name = "Heavy Leather", count = 1, category = "Leather", level = 4 },
+    [4236] = { name = "Cured Heavy Hide", count = 1, category = "Leather", level = 4 },
     [8169] = { name = "Thick Hide", count = 1, category = "Leather", level = 5 },
     [4304] = { name = "Thick Leather", count = 1, category = "Leather", level = 5 },
+    [8167] = { name = "Cured Thick Hide", count = 1, category = "Leather", level = 5 },
     [17012] = { name = "Core Leather", count = 1, category = "Leather", level = 6 },
     [8170] = { name = "Rugged Leather", count = 1, category = "Leather", level = 6 },
+    [15407] = { name = "Cured Rugged Hide", count = 1, category = "Leather", level = 6 },
     [2775] = { name = "Silver Ore", count = 1, category = "Metal & Stone", level = 2 },
-    [2776] = { name = "Gold Ore", count = 1, category = "Metal & Stone", level = 3 },
+    [2776] = { name = "Gold Ore", count = 1, category = "Metal & Stone", level = 4 },
     [2770] = { name = "Copper Ore", count = 1, category = "Metal & Stone", level = 1 },
     [2771] = { name = "Tin Ore", count = 1, category = "Metal & Stone", level = 2 },
     [2840] = { name = "Copper Bar", count = 1, category = "Metal & Stone", level = 1 },
     [3576] = { name = "Tin Bar", count = 1, category = "Metal & Stone", level = 2 },
+    [2842] = { name = "Silver Bar", count = 1, category = "Metal & Stone", level = 2 },
     [2841] = { name = "Bronze Bar", count = 1, category = "Metal & Stone", level = 3 },
     [2772] = { name = "Iron Ore", count = 1, category = "Metal & Stone", level = 4 },
     [3575] = { name = "Iron Bar", count = 1, category = "Metal & Stone", level = 4 },
@@ -479,6 +510,13 @@ local function GetEnchantingFamily(name)
     return "Other"
 end
 
+local function GetElementalFamily(name)
+    if name:match("Essence") then
+        return "Essence"
+    end
+    return "Reagent"
+end
+
 local function MakeItemList(itemMap)
     local items = {}
     for itemId, item in pairs(itemMap or {}) do
@@ -533,11 +571,19 @@ local function MakeItemList(itemMap)
                 end
             end
         end
-        local leftFamily = left.category == "Enchanting" and GetEnchantingFamily(left.name) or nil
-        local rightFamily = right.category == "Enchanting" and GetEnchantingFamily(right.name) or nil
+        local leftFamily = left.category == "Enchanting" and GetEnchantingFamily(left.name)
+            or left.category == "Elemental" and GetElementalFamily(left.name)
+            or nil
+        local rightFamily = right.category == "Enchanting" and GetEnchantingFamily(right.name)
+            or right.category == "Elemental" and GetElementalFamily(right.name)
+            or nil
         if leftFamily ~= rightFamily then
             if leftFamily and rightFamily then
-                return enchantingFamilyOrder[leftFamily] < enchantingFamilyOrder[rightFamily]
+                local leftOrder = left.category == "Enchanting"
+                    and enchantingFamilyOrder[leftFamily] or elementalFamilyOrder[leftFamily]
+                local rightOrder = right.category == "Enchanting"
+                    and enchantingFamilyOrder[rightFamily] or elementalFamilyOrder[rightFamily]
+                return leftOrder < rightOrder
             elseif leftFamily then
                 return true
             elseif rightFamily then
@@ -557,42 +603,112 @@ end
 
 local function AddInventoryLines(lines, inventory, owner)
     local items = MakeItemList(inventory)
-    local previousBracket
-    local previousCategory
-    local previousFamily
+    local groups = {}
     for _, item in ipairs(items) do
-        if item.professionBracket ~= previousBracket then
-            local bracket = professionBrackets[item.professionBracket]
-            lines[#lines + 1] = {
-                kind = "bracket",
-                text = bracket.label
-            }
-            previousBracket = item.professionBracket
-            previousCategory = nil
-            previousFamily = nil
-        end
-        if item.category ~= previousCategory then
-            lines[#lines + 1] = { kind = "header", text = "  " .. item.category }
-            previousCategory = item.category
-            previousFamily = nil
-        end
+        local familyKey
+        local familyLabel
         if item.category == "Enchanting" then
-            local family = enchantingFamilyLabels[GetEnchantingFamily(item.name)]
-            if family ~= previousFamily then
-                lines[#lines + 1] = { kind = "subheader", text = "    " .. family }
-                previousFamily = family
-            end
-        else
-            previousFamily = nil
+            familyKey = GetEnchantingFamily(item.name)
+            familyLabel = enchantingFamilyLabels[familyKey]
+        elseif item.category == "Elemental" then
+            familyKey = GetElementalFamily(item.name)
+            familyLabel = elementalFamilyLabels[familyKey]
         end
-        local suffix = owner and ("  [" .. owner .. "]") or ""
+        local groupKey = table.concat({
+            tostring(item.professionBracket),
+            item.category,
+            familyKey or ""
+        }, "|")
+        local group = groups[#groups]
+        if not group or group.key ~= groupKey then
+            group = {
+                key = groupKey,
+                bracket = item.professionBracket,
+                category = item.category,
+                family = familyLabel,
+                items = {}
+            }
+            groups[#groups + 1] = group
+        end
+        group.items[#group.items + 1] = item
+    end
+
+    local function AddGridLine(left, right, connected)
         lines[#lines + 1] = {
-            kind = "item",
-            text = item.name .. "  x" .. item.count .. suffix,
-            itemId = item.id,
-            quality = item.quality,
-            icon = item.icon
+            kind = "items",
+            left = left,
+            right = right,
+            connected = connected,
+            owner = owner
         }
+    end
+
+    local previousBracket
+    for _, group in ipairs(groups) do
+        local bracket = professionBrackets[group.bracket]
+        if group.bracket ~= previousBracket then
+            lines[#lines + 1] = { kind = "bracket", text = bracket.label }
+            previousBracket = group.bracket
+        end
+        lines[#lines + 1] = { kind = "header", text = group.category }
+        if group.family then
+            lines[#lines + 1] = { kind = "subheader", text = group.family }
+        end
+
+        local itemById = {}
+        for _, item in ipairs(group.items) do
+            itemById[item.id] = item
+        end
+        local consumed = {}
+        local entries = {}
+        for _, item in ipairs(group.items) do
+            local output = materialConversions[item.id] and itemById[materialConversions[item.id]]
+            if output then
+                consumed[item.id] = true
+                consumed[output.id] = true
+                entries[#entries + 1] = {
+                    left = item,
+                    right = output,
+                    connected = true,
+                    level = item.level,
+                    name = item.name
+                }
+            end
+        end
+        for _, item in ipairs(group.items) do
+            if not consumed[item.id] then
+                entries[#entries + 1] = {
+                    left = item,
+                    level = item.level,
+                    name = item.name
+                }
+            end
+        end
+        table.sort(entries, function(left, right)
+            if left.level ~= right.level then
+                return left.level < right.level
+            end
+            return string.lower(left.name) < string.lower(right.name)
+        end)
+
+        local pending
+        for _, entry in ipairs(entries) do
+            if entry.connected then
+                if pending then
+                    AddGridLine(pending)
+                    pending = nil
+                end
+                AddGridLine(entry.left, entry.right, true)
+            elseif pending then
+                AddGridLine(pending, entry.left)
+                pending = nil
+            else
+                pending = entry.left
+            end
+        end
+        if pending then
+            AddGridLine(pending)
+        end
     end
 end
 
@@ -661,29 +777,68 @@ end
 local function CreateDisplayRow(content, index)
     local row = content:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     row:SetPoint("TOPLEFT", content, "TOPLEFT", 24, -((index - 1) * rowHeight))
-    row:SetWidth(480)
+    row:SetWidth(310)
     row:SetHeight(rowHeight)
     row:SetJustifyH("LEFT")
 
-    local iconButton = CreateFrame("Button", nil, content)
-    iconButton:SetSize(18, 18)
-    iconButton:SetPoint("TOPLEFT", content, "TOPLEFT", 2, -((index - 1) * rowHeight) - 1)
-    iconButton.icon = iconButton:CreateTexture(nil, "ARTWORK")
-    iconButton.icon:SetAllPoints(iconButton)
-    iconButton:SetScript("OnEnter", function(self)
-        if self.itemId and GameTooltip and GameTooltip.SetHyperlink then
-            GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-            GameTooltip:SetHyperlink("item:" .. self.itemId)
-            GameTooltip:Show()
-        end
-    end)
-    iconButton:SetScript("OnLeave", function()
-        if GameTooltip then
-            GameTooltip:Hide()
-        end
-    end)
-    row.iconButton = iconButton
+    local function createIconButton(x)
+        local iconButton = CreateFrame("Button", nil, content)
+        iconButton:SetSize(18, 18)
+        iconButton:SetPoint("TOPLEFT", content, "TOPLEFT", x, -((index - 1) * rowHeight) - 1)
+        iconButton.icon = iconButton:CreateTexture(nil, "ARTWORK")
+        iconButton.icon:SetAllPoints(iconButton)
+        iconButton:SetScript("OnEnter", function(self)
+            if self.itemId and GameTooltip and GameTooltip.SetHyperlink then
+                GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+                GameTooltip:SetHyperlink("item:" .. self.itemId)
+                GameTooltip:Show()
+            end
+        end)
+        iconButton:SetScript("OnLeave", function()
+            if GameTooltip then
+                GameTooltip:Hide()
+            end
+        end)
+        return iconButton
+    end
+
+    row.iconButton = createIconButton(2)
+    row.rightLabel = content:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    row.rightLabel:SetPoint("TOPLEFT", content, "TOPLEFT", 380, -((index - 1) * rowHeight))
+    row.rightLabel:SetWidth(310)
+    row.rightLabel:SetHeight(rowHeight)
+    row.rightLabel:SetJustifyH("LEFT")
+    row.rightIconButton = createIconButton(358)
+    row.arrow = content:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    row.arrow:SetPoint("TOPLEFT", content, "TOPLEFT", 331, -((index - 1) * rowHeight))
+    row.arrow:SetWidth(24)
+    row.arrow:SetHeight(rowHeight)
+    row.arrow:SetJustifyH("CENTER")
+    row.arrow:SetText(">")
     return row
+end
+
+local function SetDisplayItem(label, iconButton, item, owner)
+    if not item then
+        label:SetText("")
+        label:Hide()
+        iconButton.itemId = nil
+        iconButton:Hide()
+        return
+    end
+    local suffix = owner and ("  [" .. owner .. "]") or ""
+    label:SetText(item.name .. "  x" .. item.count .. suffix)
+    local color = ITEM_QUALITY_COLORS and ITEM_QUALITY_COLORS[item.quality or 1]
+    label:SetTextColor(color and color.r or 1, color and color.g or 1, color and color.b or 1)
+    label:Show()
+    if item.icon then
+        iconButton.icon:SetTexture(item.icon)
+        iconButton.itemId = item.id
+        iconButton:Show()
+    else
+        iconButton.itemId = nil
+        iconButton:Hide()
+    end
 end
 
 Refresh = function()
@@ -701,35 +856,40 @@ Refresh = function()
     for index, row in ipairs(MINEFrame.rows) do
         local line = lines[index]
         if line then
-            row:SetText(line.text)
-            row:SetTextColor(1, 0.82, 0)
-            if line.kind == "character" then
-                row:SetTextColor(1, 0.82, 0)
-            elseif line.kind == "bracket" then
-                row:SetTextColor(0.45, 0.78, 1)
-            elseif line.kind == "subheader" then
-                row:SetTextColor(0.8, 0.8, 0.8)
-            elseif line.kind == "item" then
-                local color = ITEM_QUALITY_COLORS and ITEM_QUALITY_COLORS[line.quality or 1]
-                row:SetTextColor(color and color.r or 1, color and color.g or 1, color and color.b or 1)
-                if line.icon then
-                    row.iconButton.icon:SetTexture(line.icon)
-                    row.iconButton.itemId = line.itemId
-                    row.iconButton:Show()
-                else
-                    row.iconButton.itemId = nil
-                    row.iconButton:Hide()
-                end
+            if line.kind == "items" then
+                row:SetText("")
+                row:SetWidth(310)
+                row.rightLabel:SetText("")
+                row.arrow:SetShown(line.connected)
+                row.arrow:SetText(line.connected and "->" or "")
+                SetDisplayItem(row, row.iconButton, line.left, line.owner)
+                SetDisplayItem(row.rightLabel, row.rightIconButton, line.right, line.owner)
             else
+                row:SetText(line.text)
+                row:SetWidth(660)
+                row:SetTextColor(1, 0.82, 0)
+                row.rightLabel:SetText("")
+                row.rightLabel:Hide()
+                row.arrow:Hide()
                 row.iconButton.itemId = nil
                 row.iconButton:Hide()
+                row.rightIconButton.itemId = nil
+                row.rightIconButton:Hide()
+                if line.kind == "bracket" then
+                    row:SetTextColor(0.45, 0.78, 1)
+                elseif line.kind == "subheader" then
+                    row:SetTextColor(0.8, 0.8, 0.8)
+                end
             end
-            row.itemId = line.itemId
             row:Show()
         else
             row:Hide()
+            row.rightLabel:Hide()
+            row.arrow:Hide()
             row.iconButton.itemId = nil
             row.iconButton:Hide()
+            row.rightIconButton.itemId = nil
+            row.rightIconButton:Hide()
         end
     end
     MINEFrame.emptyText:SetShown(#lines == 0)
@@ -1018,7 +1178,7 @@ local function CreateWindow()
     end
 
     local frame = CreateFrame("Frame", "MINEFrame", UIParent, "BasicFrameTemplateWithInset")
-    frame:SetSize(560, 520)
+    frame:SetSize(760, 520)
     frame:SetPoint("CENTER")
     frame:SetMovable(true)
     frame:EnableMouse(true)
@@ -1075,7 +1235,7 @@ local function CreateWindow()
     scroll:EnableMouseWheel(true)
 
     local content = CreateFrame("Frame", nil, scroll)
-    content:SetWidth(508)
+    content:SetWidth(700)
     content:SetHeight(1)
     scroll:SetScrollChild(content)
     scroll:SetScript("OnMouseWheel", function(self, delta)

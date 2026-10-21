@@ -1,5 +1,5 @@
 local messagePrefix = "MINE"
-local rowHeight = 20
+local rowHeight = 22
 local tradeGoodsType = GetItemClassInfo and GetItemClassInfo(7)
 local chatInfoAPI = C_ChatInfo
 local registerAddonMessagePrefix = RegisterAddonMessagePrefix or (chatInfoAPI and chatInfoAPI.RegisterAddonMessagePrefix)
@@ -10,6 +10,8 @@ local getContainerItemLink = GetContainerItemLink or (containerAPI and container
 local getContainerItemInfo = GetContainerItemInfo or (containerAPI and containerAPI.GetContainerItemInfo)
 local itemAPI = C_Item
 local getItemInfo = GetItemInfo or (itemAPI and itemAPI.GetItemInfo)
+local requestLoadItemDataByID = itemAPI and itemAPI.RequestLoadItemDataByID
+local requestedItemData = {}
 local categoryOrder = {
     "Cloth",
     "Leather",
@@ -36,66 +38,57 @@ local categoryBySubType = {
     ["Devices"] = "Parts"
 }
 local previewItems = {
-    ["preview-linen"] = { name = "Linen Cloth", count = 1, category = "Cloth", level = 1 },
-    ["preview-wool"] = { name = "Wool Cloth", count = 1, category = "Cloth", level = 2 },
-    ["preview-silk"] = { name = "Silk Cloth", count = 1, category = "Cloth", level = 3 },
-    ["preview-mageweave"] = { name = "Mageweave Cloth", count = 1, category = "Cloth", level = 4 },
-    ["preview-runecloth"] = { name = "Runecloth", count = 1, category = "Cloth", level = 5 },
-    ["preview-netherweave"] = { name = "Netherweave Cloth", count = 1, category = "Cloth", level = 6 },
-    ["preview-frostweave"] = { name = "Frostweave Cloth", count = 1, category = "Cloth", level = 7 },
-    ["preview-ruined-leather"] = { name = "Ruined Leather Scraps", count = 1, category = "Leather", level = 1 },
-    ["preview-light-leather"] = { name = "Light Leather", count = 1, category = "Leather", level = 2 },
-    ["preview-medium-leather"] = { name = "Medium Leather", count = 1, category = "Leather", level = 3 },
-    ["preview-heavy-leather"] = { name = "Heavy Leather", count = 1, category = "Leather", level = 4 },
-    ["preview-thick-leather"] = { name = "Thick Leather", count = 1, category = "Leather", level = 5 },
-    ["preview-rugged-leather"] = { name = "Rugged Leather", count = 1, category = "Leather", level = 6 },
-    ["preview-borean-leather"] = { name = "Borean Leather", count = 1, category = "Leather", level = 8 },
-    ["preview-copper"] = { name = "Copper Ore", count = 1, category = "Metal & Stone", level = 1 },
-    ["preview-tin"] = { name = "Tin Ore", count = 1, category = "Metal & Stone", level = 2 },
-    ["preview-bronze"] = { name = "Bronze Bar", count = 1, category = "Metal & Stone", level = 3 },
-    ["preview-iron"] = { name = "Iron Ore", count = 1, category = "Metal & Stone", level = 4 },
-    ["preview-mithril"] = { name = "Mithril Ore", count = 1, category = "Metal & Stone", level = 5 },
-    ["preview-thorium"] = { name = "Thorium Ore", count = 1, category = "Metal & Stone", level = 6 },
-    ["preview-cobalt"] = { name = "Cobalt Ore", count = 1, category = "Metal & Stone", level = 7 },
-    ["preview-saronite"] = { name = "Saronite Ore", count = 1, category = "Metal & Stone", level = 8 },
-    ["preview-peacebloom"] = { name = "Peacebloom", count = 1, category = "Herbs", level = 1 },
-    ["preview-silverleaf"] = { name = "Silverleaf", count = 1, category = "Herbs", level = 1 },
-    ["preview-mageroyal"] = { name = "Mageroyal", count = 1, category = "Herbs", level = 2 },
-    ["preview-briarthorn"] = { name = "Briarthorn", count = 1, category = "Herbs", level = 3 },
-    ["preview-sungrass"] = { name = "Sungrass", count = 1, category = "Herbs", level = 4 },
-    ["preview-dreamfoil"] = { name = "Dreamfoil", count = 1, category = "Herbs", level = 5 },
-    ["preview-felweed"] = { name = "Felweed", count = 1, category = "Herbs", level = 6 },
-    ["preview-goldclover"] = { name = "Goldclover", count = 1, category = "Herbs", level = 7 },
-    ["preview-lichbloom"] = { name = "Lichbloom", count = 1, category = "Herbs", level = 8 },
-    ["preview-strange-dust"] = { name = "Strange Dust", count = 1, category = "Enchanting", level = 1 },
-    ["preview-soul-dust"] = { name = "Soul Dust", count = 1, category = "Enchanting", level = 2 },
-    ["preview-vision-dust"] = { name = "Vision Dust", count = 1, category = "Enchanting", level = 3 },
-    ["preview-dream-dust"] = { name = "Dream Dust", count = 1, category = "Enchanting", level = 4 },
-    ["preview-arcane-dust"] = { name = "Arcane Dust", count = 1, category = "Enchanting", level = 5 },
-    ["preview-infinite-dust"] = { name = "Infinite Dust", count = 1, category = "Enchanting", level = 7 },
-    ["preview-malachite"] = { name = "Malachite", count = 1, category = "Gems", level = 1 },
-    ["preview-moss-agate"] = { name = "Moss Agate", count = 1, category = "Gems", level = 2 },
-    ["preview-aquamarine"] = { name = "Aquamarine", count = 1, category = "Gems", level = 3 },
-    ["preview-star-ruby"] = { name = "Star Ruby", count = 1, category = "Gems", level = 4 },
-    ["preview-talasite"] = { name = "Talasite", count = 1, category = "Gems", level = 6 },
-    ["preview-scarlet-ruby"] = { name = "Scarlet Ruby", count = 1, category = "Gems", level = 7 },
-    ["preview-primordial-saronite"] = { name = "Primordial Saronite", count = 1, category = "Gems", level = 8 },
-    ["preview-elemental-earth"] = { name = "Elemental Earth", count = 1, category = "Elemental", level = 1 },
-    ["preview-elemental-water"] = { name = "Elemental Water", count = 1, category = "Elemental", level = 2 },
-    ["preview-mote-of-fire"] = { name = "Mote of Fire", count = 1, category = "Elemental", level = 3 },
-    ["preview-primal-fire"] = { name = "Primal Fire", count = 1, category = "Elemental", level = 5 },
-    ["preview-crystallized-earth"] = { name = "Crystallized Earth", count = 1, category = "Elemental", level = 7 },
-    ["preview-eternal-earth"] = { name = "Eternal Earth", count = 1, category = "Elemental", level = 8 },
-    ["preview-bronze-tube"] = { name = "Bronze Tube", count = 1, category = "Parts", level = 2 },
-    ["preview-solid-blasting-powder"] = { name = "Solid Blasting Powder", count = 1, category = "Parts", level = 4 },
-    ["preview-handful-cobalt-bolts"] = { name = "Handful of Cobalt Bolts", count = 1, category = "Parts", level = 7 },
-    ["preview-froststeel-tube"] = { name = "Froststeel Tube", count = 1, category = "Parts", level = 8 },
-    ["preview-small-flame-sac"] = { name = "Small Flame Sac", count = 1, category = "Other", level = 1 },
-    ["preview-silk-thread"] = { name = "Silk Thread", count = 1, category = "Other", level = 3 },
-    ["preview-rune-thread"] = { name = "Rune Thread", count = 1, category = "Other", level = 5 },
-    ["preview-arctic-fur"] = { name = "Arctic Fur", count = 1, category = "Other", level = 8 }
+    [2589] = { name = "Linen Cloth", count = 1, category = "Cloth", level = 1 },
+    [2592] = { name = "Wool Cloth", count = 1, category = "Cloth", level = 2 },
+    [4306] = { name = "Silk Cloth", count = 1, category = "Cloth", level = 3 },
+    [4338] = { name = "Mageweave Cloth", count = 1, category = "Cloth", level = 4 },
+    [14047] = { name = "Runecloth", count = 1, category = "Cloth", level = 5 },
+    [2934] = { name = "Ruined Leather Scraps", count = 1, category = "Leather", level = 1 },
+    [2318] = { name = "Light Leather", count = 1, category = "Leather", level = 2 },
+    [2319] = { name = "Medium Leather", count = 1, category = "Leather", level = 3 },
+    [4234] = { name = "Heavy Leather", count = 1, category = "Leather", level = 4 },
+    [4304] = { name = "Thick Leather", count = 1, category = "Leather", level = 5 },
+    [8170] = { name = "Rugged Leather", count = 1, category = "Leather", level = 6 },
+    [2770] = { name = "Copper Ore", count = 1, category = "Metal & Stone", level = 1 },
+    [2771] = { name = "Tin Ore", count = 1, category = "Metal & Stone", level = 2 },
+    [2841] = { name = "Bronze Bar", count = 1, category = "Metal & Stone", level = 3 },
+    [2772] = { name = "Iron Ore", count = 1, category = "Metal & Stone", level = 4 },
+    [3858] = { name = "Mithril Ore", count = 1, category = "Metal & Stone", level = 5 },
+    [10620] = { name = "Thorium Ore", count = 1, category = "Metal & Stone", level = 6 },
+    [2447] = { name = "Peacebloom", count = 1, category = "Herbs", level = 1 },
+    [765] = { name = "Silverleaf", count = 1, category = "Herbs", level = 1 },
+    [785] = { name = "Mageroyal", count = 1, category = "Herbs", level = 2 },
+    [2450] = { name = "Briarthorn", count = 1, category = "Herbs", level = 3 },
+    [8838] = { name = "Sungrass", count = 1, category = "Herbs", level = 4 },
+    [13463] = { name = "Dreamfoil", count = 1, category = "Herbs", level = 5 },
+    [13466] = { name = "Plaguebloom", count = 1, category = "Herbs", level = 6 },
+    [10940] = { name = "Strange Dust", count = 1, category = "Enchanting", level = 1 },
+    [11083] = { name = "Soul Dust", count = 1, category = "Enchanting", level = 2 },
+    [11137] = { name = "Vision Dust", count = 1, category = "Enchanting", level = 3 },
+    [11176] = { name = "Dream Dust", count = 1, category = "Enchanting", level = 4 },
+    [16204] = { name = "Illusion Dust", count = 1, category = "Enchanting", level = 5 },
+    [774] = { name = "Malachite", count = 1, category = "Gems", level = 1 },
+    [818] = { name = "Tigerseye", count = 1, category = "Gems", level = 1 },
+    [1206] = { name = "Moss Agate", count = 1, category = "Gems", level = 2 },
+    [7909] = { name = "Aquamarine", count = 1, category = "Gems", level = 3 },
+    [7910] = { name = "Star Ruby", count = 1, category = "Gems", level = 4 },
+    [12800] = { name = "Azerothian Diamond", count = 1, category = "Gems", level = 5 },
+    [7067] = { name = "Elemental Earth", count = 1, category = "Elemental", level = 1 },
+    [7068] = { name = "Elemental Fire", count = 1, category = "Elemental", level = 2 },
+    [7070] = { name = "Elemental Water", count = 1, category = "Elemental", level = 3 },
+    [7069] = { name = "Elemental Air", count = 1, category = "Elemental", level = 4 },
+    [4371] = { name = "Bronze Tube", count = 1, category = "Parts", level = 2 },
+    [4377] = { name = "Heavy Blasting Powder", count = 1, category = "Parts", level = 4 },
+    [15992] = { name = "Dense Blasting Powder", count = 1, category = "Parts", level = 6 },
+    [15994] = { name = "Thorium Widget", count = 1, category = "Parts", level = 6 },
+    [17034] = { name = "Maple Seed", count = 1, category = "Other", level = 1 },
+    [4291] = { name = "Silken Thread", count = 1, category = "Other", level = 3 },
+    [14341] = { name = "Rune Thread", count = 1, category = "Other", level = 5 },
+    [8171] = { name = "Rugged Hide", count = 1, category = "Leather", level = 6 }
 }
 local activeTab = "character"
+local selectedCategory = "All"
+local selectedCharacterKey = "preview"
 local characterKey
 local bankOpen = false
 local guildBankOpen = false
@@ -122,7 +115,7 @@ local function GetItemCategory(itemType, itemSubType)
 end
 
 local function GetItemDetails(itemId, fallbackInfo)
-    local name, itemLevel, itemType, itemSubType
+    local name, itemLevel, itemType, itemSubType, quality, icon
     if getItemInfo then
         local info = { getItemInfo(itemId) }
         if type(info[1]) == "table" then
@@ -131,23 +124,29 @@ local function GetItemDetails(itemId, fallbackInfo)
             itemLevel = item.itemLevel
             itemType = item.itemType
             itemSubType = item.itemSubType
+            quality = item.itemQuality or item.quality
+            icon = item.itemTexture or item.iconFileID or item.icon
         else
             name = info[1]
+            quality = info[3]
             itemLevel = info[4]
             itemType = info[6]
             itemSubType = info[7]
+            icon = info[10]
         end
     end
     if fallbackInfo then
         name = name or fallbackInfo.itemName
         itemType = itemType or fallbackInfo.itemType
         itemSubType = itemSubType or fallbackInfo.itemSubType
+        quality = quality or fallbackInfo.quality
+        icon = icon or fallbackInfo.iconFileID
     end
-    return name, itemLevel, itemType, itemSubType
+    return name, itemLevel, itemType, itemSubType, quality, icon
 end
 
 local function UpdateItemMetadata(itemId, item)
-    local name, itemLevel, itemType, itemSubType = GetItemDetails(itemId)
+    local name, itemLevel, itemType, itemSubType, quality, icon = GetItemDetails(itemId)
     local category = GetItemCategory(itemType, itemSubType)
     if name then
         item.name = name
@@ -156,6 +155,8 @@ local function UpdateItemMetadata(itemId, item)
         item.category = category
         item.level = tonumber(itemLevel) or 0
     end
+    item.quality = tonumber(quality) or item.quality
+    item.icon = icon or item.icon
 end
 
 local function UpdateSharedItemMetadata(itemId)
@@ -185,9 +186,9 @@ local function ScanContainer(container)
                 local itemId = (link and tonumber(link:match("item:(%d+)")))
                     or (type(itemInfo) == "table" and itemInfo.itemID)
                 local count = type(itemInfo) == "table" and itemInfo.stackCount or legacyCount
-                local name, itemLevel, itemType, itemSubType
+                local name, itemLevel, itemType, itemSubType, quality, icon
                 if itemId then
-                    name, itemLevel, itemType, itemSubType = GetItemDetails(itemId, itemInfo)
+                    name, itemLevel, itemType, itemSubType, quality, icon = GetItemDetails(itemId, itemInfo)
                 end
                 local category = GetItemCategory(itemType, itemSubType)
                 if itemId and name and category then
@@ -199,7 +200,9 @@ local function ScanContainer(container)
                             name = name,
                             count = count or 1,
                             category = category,
-                            level = tonumber(itemLevel) or 0
+                            level = tonumber(itemLevel) or 0,
+                            quality = tonumber(quality) or 1,
+                            icon = icon
                         }
                     end
                 end
@@ -262,9 +265,9 @@ local function ScanGuildBank()
                 local link = GetGuildBankItemLink(tab, slot)
                 if link and count and count > 0 then
                     local itemId = tonumber(link:match("item:(%d+)"))
-                    local name, itemLevel, itemType, itemSubType
+                    local name, itemLevel, itemType, itemSubType, quality, icon
                     if itemId then
-                        name, itemLevel, itemType, itemSubType = GetItemDetails(itemId)
+                        name, itemLevel, itemType, itemSubType, quality, icon = GetItemDetails(itemId)
                     end
                     local category = GetItemCategory(itemType, itemSubType)
                     if itemId and name and category then
@@ -276,7 +279,9 @@ local function ScanGuildBank()
                                 name = name,
                                 count = count,
                                 category = category,
-                                level = tonumber(itemLevel) or 0
+                                level = tonumber(itemLevel) or 0,
+                                quality = tonumber(quality) or 1,
+                                icon = icon
                             }
                         end
                     end
@@ -295,6 +300,17 @@ local function UpdateGuildBankItemMetadata(itemId)
         and (guildBank.items[itemId] or guildBank.items[tostring(itemId)])
     if item then
         UpdateItemMetadata(itemId, item)
+    end
+end
+
+local function UpdateCharacterItemMetadata(itemId)
+    for _, character in pairs((MINE_DB and MINE_DB.characters) or {}) do
+        for _, inventory in ipairs({ character.items or {}, character.bankItems or {} }) do
+            local item = inventory[itemId] or inventory[tostring(itemId)]
+            if item then
+                UpdateItemMetadata(itemId, item)
+            end
+        end
     end
 end
 
@@ -324,13 +340,30 @@ end
 local function MakeItemList(itemMap)
     local items = {}
     for itemId, item in pairs(itemMap or {}) do
-        items[#items + 1] = {
-            id = tonumber(itemId),
-            name = item.name or ("Item " .. tostring(itemId)),
-            count = tonumber(item.count) or 0,
-            category = item.category or "Other",
-            level = tonumber(item.level) or 0
-        }
+        if selectedCategory == "All" or (item.category or "Other") == selectedCategory then
+            local quality = tonumber(item.quality)
+            local icon = item.icon
+            if (not quality or not icon) and tonumber(itemId) then
+                local _, _, _, _, itemQuality, itemIcon = GetItemDetails(tonumber(itemId))
+                quality = quality or tonumber(itemQuality)
+                icon = icon or itemIcon
+                item.quality = quality
+                item.icon = icon
+                if (not quality or not icon) and requestLoadItemDataByID and not requestedItemData[itemId] then
+                    requestLoadItemDataByID(tonumber(itemId))
+                    requestedItemData[itemId] = true
+                end
+            end
+            items[#items + 1] = {
+                id = tonumber(itemId),
+                name = item.name or ("Item " .. tostring(itemId)),
+                count = tonumber(item.count) or 0,
+                category = item.category or "Other",
+                level = tonumber(item.level) or 0,
+                quality = quality or 1,
+                icon = icon
+            }
+        end
     end
     table.sort(items, function(left, right)
         if left.category ~= right.category then
@@ -359,6 +392,8 @@ local function AddInventoryToTotals(totals, inventory, characterName)
                 count = 0,
                 category = item.category,
                 level = item.level,
+                quality = item.quality,
+                icon = item.icon,
                 owners = {}
             }
             total = totals[itemId]
@@ -382,9 +417,25 @@ local function AddInventoryLines(lines, inventory, owner)
         lines[#lines + 1] = {
             kind = "item",
             text = item.name .. "  x" .. item.count .. suffix,
-            itemId = item.id
+            itemId = item.id,
+            quality = item.quality,
+            icon = item.icon
         }
     end
+end
+
+local function GetCharacterKeys()
+    local keys = {}
+    for key in pairs(MINE_DB.characters) do
+        keys[#keys + 1] = key
+    end
+    table.sort(keys, function(left, right)
+        local leftCharacter = MINE_DB.characters[left]
+        local rightCharacter = MINE_DB.characters[right]
+        return string.lower(leftCharacter.name .. " - " .. leftCharacter.realm)
+            < string.lower(rightCharacter.name .. " - " .. rightCharacter.realm)
+    end)
+    return keys
 end
 
 local function GetDisplayLines()
@@ -395,21 +446,17 @@ local function GetDisplayLines()
             AddInventoryLines(lines, character.items)
         end
     elseif activeTab == "characters" then
-        local keys = {}
-        for key in pairs(MINE_DB.characters) do
-            keys[#keys + 1] = key
+        if selectedCharacterKey == "preview" then
+            lines[#lines + 1] = { kind = "character", text = "Material Preview - Classic sample data" }
+            AddInventoryLines(lines, previewItems)
+        else
+            local entry = MINE_DB.characters[selectedCharacterKey]
+            if entry then
+                lines[#lines + 1] = { kind = "character", text = entry.name .. " - " .. entry.realm }
+                AddInventoryLines(lines, entry.items)
+                AddInventoryLines(lines, entry.bankItems, "Bank")
+            end
         end
-        table.sort(keys, function(left, right)
-            return string.lower(MINE_DB.characters[left].name) < string.lower(MINE_DB.characters[right].name)
-        end)
-        for _, key in ipairs(keys) do
-            local entry = MINE_DB.characters[key]
-            lines[#lines + 1] = { kind = "character", text = entry.name .. " - " .. entry.realm }
-            AddInventoryLines(lines, entry.items)
-            AddInventoryLines(lines, entry.bankItems, "Bank")
-        end
-        lines[#lines + 1] = { kind = "character", text = "Material Preview - Sample data (not a saved character)" }
-        AddInventoryLines(lines, previewItems)
     elseif activeTab == "account" then
         local totals = {}
         for _, entry in pairs(MINE_DB.characters) do
@@ -431,7 +478,9 @@ local function GetDisplayLines()
             lines[#lines + 1] = {
                 kind = "item",
                 text = item.name .. "  x" .. item.count .. "  (" .. table.concat(totals[item.id].owners, ", ") .. ")",
-                itemId = item.id
+                itemId = item.id,
+                quality = item.quality,
+                icon = item.icon
             }
         end
     else
@@ -462,10 +511,13 @@ Refresh = function()
     while #MINEFrame.rows < #lines do
         local index = #MINEFrame.rows + 1
         local row = content:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-        row:SetPoint("TOPLEFT", content, "TOPLEFT", 2, -((index - 1) * rowHeight))
-        row:SetWidth(460)
+        row:SetPoint("TOPLEFT", content, "TOPLEFT", 24, -((index - 1) * rowHeight))
+        row:SetWidth(480)
         row:SetHeight(rowHeight)
         row:SetJustifyH("LEFT")
+        row.icon = content:CreateTexture(nil, "ARTWORK")
+        row.icon:SetSize(18, 18)
+        row.icon:SetPoint("TOPLEFT", content, "TOPLEFT", 2, -((index - 1) * rowHeight) - 1)
         MINEFrame.rows[index] = row
     end
     for index, row in ipairs(MINEFrame.rows) do
@@ -476,12 +528,22 @@ Refresh = function()
             if line.kind == "character" then
                 row:SetTextColor(1, 0.82, 0)
             elseif line.kind == "item" then
-                row:SetTextColor(1, 1, 1)
+                local color = ITEM_QUALITY_COLORS and ITEM_QUALITY_COLORS[line.quality or 1]
+                row:SetTextColor(color and color.r or 1, color and color.g or 1, color and color.b or 1)
+                if line.icon then
+                    row.icon:SetTexture(line.icon)
+                    row.icon:Show()
+                else
+                    row.icon:Hide()
+                end
+            else
+                row.icon:Hide()
             end
             row.itemId = line.itemId
             row:Show()
         else
             row:Hide()
+            row.icon:Hide()
         end
     end
     MINEFrame.emptyText:SetShown(#lines == 0)
@@ -501,7 +563,65 @@ local function SetTab(tab)
             button:Enable()
         end
     end
+    if MINEFrame.characterDropdown then
+        if tab == "characters" then
+            MINEFrame.characterDropdown:Show()
+        else
+            MINEFrame.characterDropdown:Hide()
+        end
+    end
     Refresh()
+end
+
+local function InitializeCategoryDropdown(dropdown)
+    UIDropDownMenu_Initialize(dropdown, function(_, level)
+        local function addCategory(category)
+            local info = UIDropDownMenu_CreateInfo()
+            info.text = category == "All" and "All Categories" or category
+            info.value = category
+            info.checked = selectedCategory == category
+            info.func = function()
+                selectedCategory = category
+                UIDropDownMenu_SetText(dropdown, info.text)
+                Refresh()
+            end
+            UIDropDownMenu_AddButton(info, level)
+        end
+        addCategory("All")
+        for _, category in ipairs(categoryOrder) do
+            addCategory(category)
+        end
+    end)
+end
+
+local function InitializeCharacterDropdown(dropdown)
+    UIDropDownMenu_Initialize(dropdown, function(_, level)
+        local info = UIDropDownMenu_CreateInfo()
+        info.text = "Material Preview"
+        info.value = "preview"
+        info.checked = selectedCharacterKey == "preview"
+        info.func = function()
+            selectedCharacterKey = "preview"
+            UIDropDownMenu_SetText(dropdown, "Material Preview")
+            Refresh()
+        end
+        UIDropDownMenu_AddButton(info, level)
+        for _, key in ipairs(GetCharacterKeys()) do
+            local character = MINE_DB.characters[key]
+            local label = character.name .. " - " .. character.realm
+            local characterKeyValue = key
+            info = UIDropDownMenu_CreateInfo()
+            info.text = label
+            info.value = characterKeyValue
+            info.checked = selectedCharacterKey == characterKeyValue
+            info.func = function()
+                selectedCharacterKey = characterKeyValue
+                UIDropDownMenu_SetText(dropdown, label)
+                Refresh()
+            end
+            UIDropDownMenu_AddButton(info, level)
+        end
+    end)
 end
 
 local function GetShareChannel()
@@ -712,7 +832,7 @@ local function CreateWindow()
     end
 
     local frame = CreateFrame("Frame", "MINEFrame", UIParent, "BasicFrameTemplateWithInset")
-    frame:SetSize(520, 500)
+    frame:SetSize(560, 520)
     frame:SetPoint("CENTER")
     frame:SetMovable(true)
     frame:EnableMouse(true)
@@ -726,14 +846,14 @@ local function CreateWindow()
     frame.tabButtons = {}
     local tabs = {
         { key = "character", text = "Character", x = 12 },
-        { key = "characters", text = "Characters", x = 102 },
-        { key = "account", text = "Account", x = 202 },
-        { key = "shared", text = "Shared", x = 292 }
+        { key = "characters", text = "Characters", x = 100 },
+        { key = "account", text = "Account", x = 188 },
+        { key = "shared", text = "Shared", x = 276 }
     }
     for _, tab in ipairs(tabs) do
         local tabKey = tab.key
         local button = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
-        button:SetSize(86, 22)
+        button:SetSize(82, 22)
         button:SetPoint("TOPLEFT", frame, "TOPLEFT", tab.x, -30)
         button:SetText(tab.text)
         button:SetScript("OnClick", function()
@@ -743,20 +863,33 @@ local function CreateWindow()
     end
 
     local shareButton = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
-    shareButton:SetSize(112, 22)
+    shareButton:SetSize(92, 22)
     shareButton:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -12, -30)
     shareButton:SetText("Share")
     shareButton:SetScript("OnClick", function()
         SendSnapshot(false)
     end)
 
+    frame.categoryDropdown = CreateFrame("Frame", "MINECategoryDropdown", frame, "UIDropDownMenuTemplate")
+    frame.categoryDropdown:SetPoint("TOPLEFT", frame, "TOPLEFT", 2, -58)
+    UIDropDownMenu_SetWidth(frame.categoryDropdown, 155)
+    UIDropDownMenu_SetText(frame.categoryDropdown, "All Categories")
+    InitializeCategoryDropdown(frame.categoryDropdown)
+
+    frame.characterDropdown = CreateFrame("Frame", "MINECharacterDropdown", frame, "UIDropDownMenuTemplate")
+    frame.characterDropdown:SetPoint("TOPLEFT", frame, "TOPLEFT", 210, -58)
+    UIDropDownMenu_SetWidth(frame.characterDropdown, 250)
+    UIDropDownMenu_SetText(frame.characterDropdown, "Material Preview")
+    InitializeCharacterDropdown(frame.characterDropdown)
+    frame.characterDropdown:Hide()
+
     local scroll = CreateFrame("ScrollFrame", nil, frame)
-    scroll:SetPoint("TOPLEFT", frame, "TOPLEFT", 12, -60)
+    scroll:SetPoint("TOPLEFT", frame, "TOPLEFT", 12, -92)
     scroll:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -30, 12)
     scroll:EnableMouseWheel(true)
 
     local content = CreateFrame("Frame", nil, scroll)
-    content:SetWidth(468)
+    content:SetWidth(508)
     content:SetHeight(1)
     scroll:SetScrollChild(content)
     scroll:SetScript("OnMouseWheel", function(self, delta)
@@ -865,8 +998,10 @@ events:SetScript("OnEvent", function(_, event, ...)
     elseif event == "GET_ITEM_INFO_RECEIVED" then
         local itemId, success = ...
         if success and itemId then
+            requestedItemData[itemId] = nil
             UpdateSharedItemMetadata(itemId)
             UpdateGuildBankItemMetadata(itemId)
+            UpdateCharacterItemMetadata(itemId)
         end
         bagRefreshDelay = 0.1
         if guildBankOpen then

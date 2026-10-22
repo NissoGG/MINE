@@ -255,6 +255,7 @@ local guildBankOpen = false
 local incomingTransfers = {}
 local outgoingMessages = {}
 local bagRefreshDelay
+local bankRefreshDelay
 local guildBankRefreshDelay
 local loginShareDelay
 local guildCheckDelay
@@ -416,6 +417,9 @@ local function ScanGuildBank()
 
     local items = {}
     local tabCount = GetNumGuildBankTabs() or 0
+    if tabCount == 0 then
+        return
+    end
     local slotCount = NUM_GUILDBANKSLOTS_PER_TAB or 98
     for tab = 1, tabCount do
         local _, _, isViewable = GetGuildBankTabInfo(tab)
@@ -1048,10 +1052,18 @@ RuntimeUpdate = function(_, elapsed)
         if bagRefreshDelay <= 0 then
             bagRefreshDelay = nil
             SaveCurrentCharacter()
+            Refresh()
+        end
+    end
+
+    if bankRefreshDelay then
+        bankRefreshDelay = bankRefreshDelay - elapsed
+        if bankRefreshDelay <= 0 then
+            bankRefreshDelay = nil
             if bankOpen then
                 SaveBank()
+                Refresh()
             end
-            Refresh()
         end
     end
 
@@ -1108,7 +1120,7 @@ RuntimeUpdate = function(_, elapsed)
         end
     end
 
-    if not bagRefreshDelay and not loginShareDelay and not guildCheckDelay
+    if not bagRefreshDelay and not bankRefreshDelay and not loginShareDelay and not guildCheckDelay
         and not guildTabQueryDelay and not guildBankRefreshDelay and #outgoingMessages == 0 then
         sendCooldown = 0
         runtimeFrame:SetScript("OnUpdate", nil)
@@ -1265,6 +1277,7 @@ events:RegisterEvent("PLAYER_LOGOUT")
 events:RegisterEvent("BAG_UPDATE")
 events:RegisterEvent("BANKFRAME_OPENED")
 events:RegisterEvent("BANKFRAME_CLOSED")
+events:RegisterEvent("PLAYERBANKSLOTS_CHANGED")
 events:RegisterEvent("GUILDBANKFRAME_OPENED")
 events:RegisterEvent("GUILDBANKFRAME_CLOSED")
 events:RegisterEvent("GUILDBANKBAGSLOTS_CHANGED")
@@ -1301,10 +1314,16 @@ events:SetScript("OnEvent", function(_, event, ...)
         runtimeFrame:SetScript("OnUpdate", RuntimeUpdate)
     elseif event == "BANKFRAME_OPENED" then
         bankOpen = true
-        SaveBank()
-        Refresh()
+        bankRefreshDelay = 0.5
+        runtimeFrame:SetScript("OnUpdate", RuntimeUpdate)
     elseif event == "BANKFRAME_CLOSED" then
         bankOpen = false
+        bankRefreshDelay = nil
+    elseif event == "PLAYERBANKSLOTS_CHANGED" then
+        if bankOpen then
+            bankRefreshDelay = 0.2
+            runtimeFrame:SetScript("OnUpdate", RuntimeUpdate)
+        end
     elseif event == "GUILDBANKFRAME_OPENED" then
         RefreshGuildMembership()
         guildBankOpen = currentGuildName ~= nil
@@ -1313,7 +1332,7 @@ events:SetScript("OnEvent", function(_, event, ...)
             MINE_DB.guildBank.guildName = currentGuildName
             queuedGuildTab = 1
             guildTabQueryDelay = 0
-            guildBankRefreshDelay = 0.5
+            guildBankRefreshDelay = nil
             runtimeFrame:SetScript("OnUpdate", RuntimeUpdate)
         end
         Refresh()
@@ -1321,13 +1340,17 @@ events:SetScript("OnEvent", function(_, event, ...)
         guildBankOpen = false
         queuedGuildTab = nil
         guildTabQueryDelay = nil
+        guildBankRefreshDelay = nil
     elseif event == "GUILDBANKBAGSLOTS_CHANGED" then
-        guildBankRefreshDelay = 0.2
-        runtimeFrame:SetScript("OnUpdate", RuntimeUpdate)
+        if guildBankOpen and not guildTabQueryDelay then
+            guildBankRefreshDelay = 0.2
+            runtimeFrame:SetScript("OnUpdate", RuntimeUpdate)
+        end
     elseif event == "GUILDBANK_UPDATE_TABS" then
         if guildBankOpen then
             queuedGuildTab = 1
             guildTabQueryDelay = 0
+            guildBankRefreshDelay = nil
             runtimeFrame:SetScript("OnUpdate", RuntimeUpdate)
         end
     elseif event == "PLAYER_GUILD_UPDATE" then
@@ -1345,11 +1368,12 @@ events:SetScript("OnEvent", function(_, event, ...)
             UpdateCharacterItemMetadata(itemId)
         end
         bagRefreshDelay = 0.1
-        if guildBankOpen then
+        if guildBankOpen and not guildTabQueryDelay then
             guildBankRefreshDelay = 0.1
         end
         runtimeFrame:SetScript("OnUpdate", RuntimeUpdate)
     elseif event == "PLAYER_ENTERING_WORLD" then
+        bagRefreshDelay = 0.1
         loginShareDelay = 4
         guildCheckDelay = 5
         runtimeFrame:SetScript("OnUpdate", RuntimeUpdate)

@@ -33,4 +33,4 @@ Run:
 .\package.ps1
 ```
 
-The install-ready archive is written to `dist\MINE-0.11.0.zip` and versioned with the source so it is available from the repository. Extract it into the WoW Forever `Interface\AddOns` folder so the addon files are under `Interface\AddOns\MINE`.
+The install-ready archive is written to `dist\MINE-0.12.0.zip` and versioned with the source so it is available from the repository. Extract it into the WoW Forever `Interface\AddOns` folder so the addon files are under `Interface\AddOns\MINE`.
